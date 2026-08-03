@@ -1,0 +1,6 @@
+hgvs: /storage/mathelierarea/processed/eirikhoy/action_var/data/BRCA1_BRCA2_PALB2_varianter_2025_02_10.csv
+cache_url: https://ftp.ensembl.org/pub/release-111/variation/indexed_vep_cache/homo_sapiens_vep_111_GRCh38.tar.gz
+cache: /storage/mathelierarea/processed/eirikhoy/action_var/resources/homo_sapiens_vep_111_GRCh38
+vep_out: /storage/mathelierarea/processed/eirikhoy/action_var/results/vep_output.txt
+vep_container: docker://ensemblorg/ensembl-vep:release_111.0
+
