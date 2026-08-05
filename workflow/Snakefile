@@ -3,15 +3,18 @@
 # ----------------------------------------------------------------------------------------------------------
 
 # rules/run_vep.smk
+VAR_EXCEL = config['var_excel']
 HGVS = config['hgvs']
-CACHE = config['cache']
+CACHE_FILE = config['cache_file']
+CACHE_PATH = config['cache_path']
 CACHE_URL = config['cache_url']
 VEP_OUT = config['vep_out']
 VEP_CONTAINER = config['vep_container']
 
 rule all:
     input:
-        CACHE,
+        HGVS,
+        CACHE_FILE,
         VEP_OUT
 
 # ----------------------------------------------------------------------------------------------------------
