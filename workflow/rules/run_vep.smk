@@ -53,7 +53,7 @@ rule run_vep:
     shell:
         """
         vep --input_file {input.hgvs} --format hgvs \
-        --cache --dir_cache resources/ --refseq --offline \
+        --cache --dir_cache resources/ --refseq \
         --assembly GRCh38 --tab --force_overwrite \
         --output_file {output.tab}
         """
