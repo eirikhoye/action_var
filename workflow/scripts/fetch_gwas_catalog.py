@@ -50,8 +50,6 @@ def gwas_api_request(endpoint, params=None):
         print(f"An error occurred: {e}")
         return None
 
-print("Helper function 'gwas_api_request' is defined.")
-
 
 def get_all_variants_for_trait(trait_name):
     """
@@ -61,7 +59,7 @@ def get_all_variants_for_trait(trait_name):
     current_page = 0
     total_pages = 1
 
-    print(f"--- Starting search for '{trait_name}")
+    print(f"--- Starting search for '{trait_name}' ---")
 
     # Loop through pages of the API result
     while current_page < total_pages:
@@ -71,3 +69,65 @@ def get_all_variants_for_trait(trait_name):
             "size": 200,
             "page": current_page
         }
+
+        data = gwas_api_request(endpoint, params)
+
+        if data and '_embedded' in data:
+            associations_list = data['_embedded']['associations']
+
+            if current_page == 0:
+                total_pages = data['page']['totaPages']
+
+            for association in associations_list:
+                if 'snp_effect_allele' in association and association['snp_effect_allele']:
+                    risk_allele_str = association['snp_effect_allele'][0]
+                    rs_id = risk_allele_str.split('-')[0]
+                    if rs_id.startswith('rs'):
+                        variants.add(rs_id)
+
+            current_page += 1
+            time.sleep(0.1)
+        else:
+            print("No more data or an error occurred. Stopping.")
+            break
+
+    print(f"--- Finished fetching for '{trait_name}'. Found {len(variants)} total unique variants. ---\n")       
+    return variants
+
+
+def get_all_associations_for_trait(trait_name):
+    """
+    
+    """
+    all_associations = []
+    current_page = 0
+    total_pages = 1
+
+    print(f"--- Starting search for all associations related to '{trait_name}' ---")
+
+    while current_page < total_pages:
+        endpoint = "/v2/associations"
+        params = {
+            "efo_trait": trait_name,
+            "sort" :"p_value",
+            "direction": "asc",
+            "size": 40,
+            "page": current_page
+        }
+
+        data = gwas_api_request(endpoint, params)
+
+        if data and '_embedded' in data:
+            associations_list = data['_embedded']['associations']
+            all_associations.extend(associations_list)
+
+            if current_page == 0:
+                total_pages = data['page']['totalPages']
+
+            current_page += 1
+            time.sleep(0.1)
+        else:
+            print("No more data or an error occurred. Stopping.")
+            break
+
+        
