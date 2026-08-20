@@ -1,10 +1,24 @@
+# ---------------------------------------------------------------------------
+# rules/run_vep.smk configuration
+# ---------------------------------------------------------------------------
 var_excel: /storage/mathelierarea/processed/eirikhoy/action_var/data/BRCA1_BRCA2_PALB2_varianter_2025_02_10.xlsx
 hgvs: /storage/mathelierarea/processed/eirikhoy/action_var/data/BRCA1_BRCA2_PALB2_varianter_2025_02_10_HGVS.txt
-#cache_url: https://ftp.ensembl.org/pub/release-111/variation/indexed_vep_cache/homo_sapiens_vep_111_GRCh38.tar.gz
 cache_file: /storage/mathelierarea/processed/eirikhoy/action_var/resources/homo_sapiens_refseq_vep_111_GRCh38.tar.gz
 cache_url: https://ftp.ensembl.org/pub/release-111/variation/indexed_vep_cache/homo_sapiens_refseq_vep_111_GRCh38.tar.gz
-#cache: /storage/mathelierarea/processed/eirikhoy/action_var/resources/homo_sapiens_vep_111_GRCh38
 cache_path: /storage/mathelierarea/processed/eirikhoy/action_var/resources/homo_sapiens_refseq/111_GRCh38
 vep_out: /storage/mathelierarea/processed/eirikhoy/action_var/results/vep_output.txt
 vep_container: docker://ensemblorg/ensembl-vep:release_111.0
 
+# ---------------------------------------------------------------------------
+# GWAS Catalog fetch configuration
+# ---------------------------------------------------------------------------
+gwas_catalog:
+  traits:
+    - "breast carcinoma"
+    - "breast cancer"
+
+  output_dir: "results/gwas_catalog"
+  base_url: "https://www.ebi.ac.uk/gwas/rest/api"
+  page_size: 200
+  request_sleep_seconds: 0.1
+  p_value_threshold: 5.0e-8

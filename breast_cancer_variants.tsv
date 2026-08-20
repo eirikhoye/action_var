@@ -1,0 +1,471 @@
+variant_rsID	risk_allele_base	p_value	or_value	risk_frequency	mapped_genes	efo_traits	accession_id	pubmed_id	first_author
+rs1219648	A	4.0000000000000004e-254		NR	FGFR2	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs16886181	T	5e-122		NR	MAP3K1, C5orf67	breast cancer, lung cancer	GCST90270343	36819030	Guo H
+rs3125719	T	4e-80	0.58	0.4585	MTUS2	breast cancer	GCST90319677	37851288	Hsu YC
+rs630965	C	1e-63		NR	RPL36P14, CHCHD4P2	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs2936870	C	5e-60		0.60508484	FGFR2	breast cancer	GCST90468117	39789286	Loya H
+rs10995201	A	1e-56		NR	LINC02929	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs4784227	T	5e-50		NR	CASC16	breast cancer	GCST90428116	38538606	Harris BHL
+rs2981575	A	8e-50		NR	FGFR2	breast cancer	GCST90428116	38538606	Harris BHL
+rs8051542	T	2e-47		NR	TOX3	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs1421085	T	4e-47		NR	FTO	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs4784227	T	1e-46		0.23911756	CASC16	breast cancer	GCST90468117	39789286	Loya H
+rs6912323	?	3e-45		NR	ESR1, CCDC170	breast cancer	GCST90651148	40465716	Liu TY
+rs9383937	?	1e-44		NR	ESR1, CCDC170	breast cancer	GCST90651150	40465716	Liu TY
+rs9383937	?	2e-44		NR	ESR1, CCDC170	breast cancer	GCST90651151	40465716	Liu TY
+rs3814113	T	2e-43		NR	BNC2, RN7SL720P	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs12922061	T	2e-33		NR	CASC16	breast cancer	GCST90428116	38538606	Harris BHL
+rs244353	G	1e-31		NR	STXBP4	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs4729854	T	3.0000000000000003e-30		NR	FAM185A, RASA4DP	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+chr22:29551872	?	1e-29		NR		breast cancer	GCST90840648	42065926	Bogumil D
+rs910416	T	2e-29		NR	ESR1	COVID-19, breast cancer	GCST90296489	37636041	Zhao X
+rs6826366	G	3e-28		NR	ADAM29	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs9613774	G	8e-28	0.7	0.361	ZNRF3	breast cancer	GCST90319677	37851288	Hsu YC
+rs7098100	G	4e-27		NR	MLLT10	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs7650602	?	7e-27		NR	ZBTB38	breast cancer, body fat distribution	GCST90693337	40874817	Wang S
+rs17474001	T	2e-26		NR	STKLD1	COVID-19, breast cancer	GCST90296487	37636041	Zhao X
+rs6785012	?	2e-26		NR	ZBTB38	breast cancer, body fat distribution	GCST90693341	40874817	Wang S
+rs8057044	?	2e-26		NR	FTO	breast cancer, body fat distribution	GCST90693333	40874817	Wang S
+rs754537	?	5e-26		NR	DNAJC27	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs9411395	G	5e-26		NR	LCN1P2	COVID-19, breast cancer	GCST90296487	37636041	Zhao X
+rs10107982	?	6e-26		NR	CASC8, PCAT1	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs7709971	A	1e-25		0.1623438	MAP3K1, C5orf67	breast cancer	GCST90468117	39789286	Loya H
+rs554219	G	3.0000000000000002e-25		0.1204058	LINC01488, PNCRNA-D	breast cancer	GCST90468117	39789286	Loya H
+rs78540526	T	5.0000000000000005e-25		NR	LINC01488, PNCRNA-D	breast cancer	GCST90428116	38538606	Harris BHL
+rs10188334	?	9e-25		NR	TMEM18, LINC01875	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs12048493	?	1e-24		NR	OTUD7B	breast cancer, body fat distribution	GCST90693341	40874817	Wang S
+rs2736108	C	5e-24		NR	TERT, MIR4457	breast cancer, lung cancer	GCST90270343	36819030	Guo H
+rs4277389	A	1e-23		NR	CRHR1, MAPT-AS1, LINC02210-CRHR1	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs4808616	C	2e-23		NR	ABHD8	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs6223688	?	2e-23		NR		breast cancer	GCST90435600	30104761	Zhou W
+rs10069690	C	4.9999999999999997e-23		NR	TERT	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs2413624	C	6e-23		NR	MRTFA	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs7957059	?	1e-22		NR	CCDC91	breast cancer, body fat distribution	GCST90693337	40874817	Wang S
+rs62237617	?	4e-22		NR	TTC28	breast cancer	GCST90435600	30104761	Zhou W
+rs7097066	G	7e-22		NR	ZMIZ1	breast cancer, lung cancer	GCST90270343	36819030	Guo H
+rs12806952	?	8e-22		NR	LINC02747, LINC02952	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs3217992	C	2e-21		NR	CDKN2B, CDKN2B-AS1	breast cancer, lung cancer	GCST90270343	36819030	Guo H
+rs11672660	?	2e-21		NR	GIPR	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs10107982	?	2e-21		NR	CASC8, PCAT1	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs62237617	T	2e-20		NR	TTC28	breast cancer	GCST90428116	38538606	Harris BHL
+rs7957059	?	2e-20		NR	CCDC91	breast cancer, body fat distribution	GCST90693341	40874817	Wang S
+rs6587723	?	2e-20		NR	OTUD7B	breast cancer, body fat distribution	GCST90693337	40874817	Wang S
+rs6465876	G	2.9999999999999997e-20		NR	FBXL13	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs2290202	G	4e-20		NR	PRC1, PRC1-AS1	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs10885405	?	5.999999999999999e-20		NR	TCF7L2	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs62056905	G	8.999999999999999e-20		NR	LINC02210-CRHR1	COVID-19, breast cancer	GCST90296489	37636041	Zhao X
+rs851980	T	8.999999999999999e-20		NR	ESR1	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs45512493	A	1e-19		NR	TOX3	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs10752581	?	1e-19		NR	LINC02956	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs9941349	?	4e-19		NR	FTO	visceral adipose tissue quantity, breast cancer	GCST90693351	40874817	Wang S
+rs9941349	?	4e-19		NR	FTO	abdominal adipose tissue measurement, breast cancer	GCST90693345	40874817	Wang S
+rs72927565	T	6e-19		NR	LINC02747, LINC02952	breast cancer	GCST90428116	38538606	Harris BHL
+rs10798578	?	9e-19		NR	SEC16B, LINC01741	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs7795180	C	2e-18		NR	ALKBH4	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs61863443	G	2e-18		NR	ZNF365, LINC02929	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs370545	G	3.0000000000000002e-18		NR	THBS3, THBS3-AS1	COVID-19, breast cancer	GCST90296487	37636041	Zhao X
+rs139909	C	3.0000000000000002e-18		NR	TNRC6B	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs199512	C	4e-18		NR	WNT3	COVID-19, breast cancer	GCST90296489	37636041	Zhao X
+rs63750417	T	4e-18		NR	MAPT	COVID-19, breast cancer	GCST90296488	37636041	Zhao X
+rs4442975	T	5e-18		0.51210403	TESHL	breast cancer	GCST90468117	39789286	Loya H
+rs16939144	G	9.000000000000001e-18		NR	HNF4G, RNU2-54P	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+chr16:52599188	?	1e-17		NR		breast cancer	GCST90840648	42065926	Bogumil D
+rs10445337	?	1e-17		NR	MAPT	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs10039338	?	1e-17		NR	MIER3	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs550057	T	1e-17		NR	ABO	COVID-19, breast cancer	GCST90296489	37636041	Zhao X
+rs4783819	?	1e-17		NR	FTO	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs12647922	?	1e-17		NR	TET2, RNU6-351P	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs13412666	A	2e-17		NR	TESHL	breast cancer	GCST90428116	38538606	Harris BHL
+rs10885406	?	5.0000000000000005e-17		NR	TCF7L2	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs6597981	?	6e-17		NR	PIDD1, RPLP2	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs1219651	G	9.000000000000001e-17		0.5973	FGFR2	breast cancer	GCST90479801	39024449	Verma A
+rs12465506	A	1e-16		NR	TESHL	breast cancer	GCST90428116	38538606	Harris BHL
+rs3769823	A	1e-16		NR	CASP8	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs12213737	?	1e-16		NR	RPL17P25, RPSAP72	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs10069690	T	2e-16	1.14	0.59	TERT	breast cancer	GCST90296719	38741014	Jia G
+rs1002473	?	4e-16		NR	MIER3, RLIG1P1	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs12162223	?	5e-16		NR	ELL, FKBP8	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs1485995	?	6e-16		NR	LINC01488	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs12921970	?	6.999999999999999e-16		NR	FTO	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs9952980	T	8e-16		NR	SLC14A2	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs754537	?	1e-15		NR	DNAJC27	breast cancer, body fat distribution	GCST90693333	40874817	Wang S
+rs11756568	?	2e-15		NR	ESR1	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs1474961	C	2e-15		NR	TTC28	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs70602	C	2e-15		NR	WNT3	COVID-19, breast cancer	GCST90296488	37636041	Zhao X
+rs12216896	T	2e-15		NR	OBP2B, GBGT1	COVID-19, breast cancer	GCST90296487	37636041	Zhao X
+rs11756568	?	3.0000000000000002e-15		NR	ESR1	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs10885405	C	3.0000000000000002e-15		NR	TCF7L2	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs2737250	A	4e-15		NR	TRPS1	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs610437	?	5.000000000000001e-15		NR	ALG9, ALG9-IT1	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs12173562	T	6.0000000000000005e-15	1.3	0.3237	ESR1, CCDC170	breast cancer	GCST90319677	37851288	Hsu YC
+rs486831	?	6.0000000000000005e-15		NR	RPL17P25, RPSAP72	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs2257505	?	6.0000000000000005e-15		NR	SETD9	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+chr10:123340431	?	7e-15		NR		breast cancer	GCST90840648	42065926	Bogumil D
+rs12653202	C	8e-15		NR	MAP3K1, C5orf67	breast cancer	GCST90428116	38538606	Harris BHL
+rs12647922	?	8e-15		NR	TET2, RNU6-351P	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+chr10:123350216	A	8e-15		0.4039		breast cancer	GCST90475587	39024449	Verma A
+rs17041868	?	8e-15		NR	BCL2L11, MIR4435-2HG	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs17222641	?	8e-15		NR	CYBRD1	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs3797580	?	2e-14		NR	POC5	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs28445639	?	2e-14		NR	DNAJC27	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs35643058	?	4e-14		NR	PSME3	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs7017073	T	4e-14		NR	PVT1, RN7SKP226	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs63334461	AT	5e-14		NR	NEK10	breast cancer	GCST90428116	38538606	Harris BHL
+rs9296769	C	5e-14		NR	FAM83B, RNU6-1023P	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs2183271	?	6e-14		NR	MLLT10	breast cancer, body fat distribution	GCST90693333	40874817	Wang S
+rs2912780	C	6e-14		0.4889	FGFR2	breast cancer	GCST90479800	39024449	Verma A
+rs2026659	G	7e-14	0.75	0.2463	CCDC171	breast cancer	GCST90319677	37851288	Hsu YC
+rs10941679	G	7e-14		NR	MRPS30-DT	breast cancer	GCST90428116	38538606	Harris BHL
+rs2277844	?	8e-14		NR	PLA2G6	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs62237617	T	9e-14		0.002969	TTC28	breast cancer	GCST90468117	39789286	Loya H
+rs3814316	A	1e-13		NR	TRIM46	COVID-19, breast cancer	GCST90296489	37636041	Zhao X
+rs9941349	?	1e-13		NR	FTO	gluteofemoral adipose tissue measurement, breast cancer	GCST90693347	40874817	Wang S
+rs539515	?	1e-13		NR	SEC16B, LINC01741	breast cancer, body fat distribution	GCST90693333	40874817	Wang S
+rs12422552	?	1e-13		NR	GNAI2P1, RPL30P11	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs11715126	A	1e-13		0.41835386	NEK10	breast cancer	GCST90468117	39789286	Loya H
+rs610437	?	1e-13		NR	ALG9, ALG9-IT1	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs13281615	G	2e-13		0.40659386	POU5F1B, CASC8, PCAT1	breast cancer	GCST90468117	39789286	Loya H
+rs13281615	G	2e-13		NR	POU5F1B, CASC8, PCAT1	breast cancer	GCST90428116	38538606	Harris BHL
+rs34697209	A	3.0000000000000003e-13		NR	ADCY3	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs1321917	?	3.0000000000000003e-13		NR	ASTN2, ASTN2-AS1	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs7602658	?	3.0000000000000003e-13		NR	DIRC3	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs1800437	?	4e-13		NR	GIPR	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs10983229	?	4e-13		NR	ASTN2, ASTN2-AS1	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs2887022	G	4e-13		NR	PGAM1P5	COVID-19, breast cancer	GCST90296488	37636041	Zhao X
+chr10:123351324	T	4e-13		0.3978		breast cancer	GCST90475588	39024449	Verma A
+rs526276	?	4e-13		NR	HCAR2, HCAR3	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs11715126	A	5e-13		NR	NEK10	breast cancer	GCST90428116	38538606	Harris BHL
+rs7907439	C	5e-13		NR	LINC02929	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs35668161	A	5e-13	1.32	0.1881	TOX3	breast cancer	GCST90319677	37851288	Hsu YC
+rs35958868	G	5e-13		NR	ADAP2	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs6913578	C	5e-13		0.3230513	ESR1, CCDC170	breast cancer	GCST90468117	39789286	Loya H
+rs10941679	G	6.000000000000001e-13		0.25379425	MRPS30-DT	breast cancer	GCST90468117	39789286	Loya H
+rs7645877	?	8e-13		NR	PRSS42P	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs13214023	G	8e-13		NR	ZKSCAN3	breast cancer, lung cancer	GCST90270343	36819030	Guo H
+rs2634458	T	9e-13	1.27	0.2537	PSD3	breast cancer	GCST90319677	37851288	Hsu YC
+rs2267371	?	9e-13		NR	PLA2G6	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs10498635	C	9e-13		NR	RIN3	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs8126001	?	9e-13		NR	OPRL1	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs4784227	T	1e-12	1.26	0.06	CASC16	breast cancer	GCST90296719	38741014	Jia G
+rs4889490	?	1e-12		NR	Metazoa_SRP, ZNF629	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs2257505	?	1e-12		NR	SETD9	breast cancer, body fat distribution	GCST90693337	40874817	Wang S
+rs10426528	?	1e-12		NR	LYPD5	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+chr3:27296994	T	2e-12		NR		breast cancer	GCST90428116	38538606	Harris BHL
+rs35643058	?	2e-12		NR	PSME3	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs61938093	T	2e-12		0.2948192	PGAM1P5	breast cancer	GCST90468117	39789286	Loya H
+rs8111582	?	2e-12		NR	ELL	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs7113953	?	2e-12		NR	MYEOV, LINC02956	breast cancer, body fat distribution	GCST90693337	40874817	Wang S
+rs17576323	?	2e-12		NR	CALCRL-AS1	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs7645877	?	2e-12		NR	PRSS42P	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs6792049	T	2e-12		NR	TIPARP-AS1	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs381551	G	2e-12		NR	RANBP9, MCUR1	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs10426528	?	2e-12		NR	LYPD5	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs13718	?	3e-12		NR	HSPA4	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs2531992	?	3e-12		NR	ADCY9	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs35138525	?	3e-12		NR	OVOL1, CFL1	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs7821288	?	3e-12		NR	RPL17P33, LINC00589	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs11709103	?	3e-12		NR	SLC4A7	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs10445337	?	3e-12		NR	MAPT	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs3935086	?	4e-12		NR	MRPS30, HCN1	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs10498635	C	5e-12		NR	RIN3	breast cancer, lung cancer	GCST90270343	36819030	Guo H
+rs2837148	A	6e-12	0.51	0.4503	IGSF5	breast cancer	GCST90319677	37851288	Hsu YC
+rs147358466	A	6e-12	1.49	0.0591	DLGAP2	breast cancer	GCST90319677	37851288	Hsu YC
+rs4447760	C	6e-12		NR	DOCK3	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs1242507	G	6e-12		NR	Y_RNA, MED9	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs2032529	?	8e-12		NR	C1orf105, SUCO	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs10865958	?	8e-12		NR	UBA7, TRAIP	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs7451021	?	8e-12		NR	L3MBTL3	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs12233670	C	8e-12		NR	TLR10, TLR1	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs17041868	?	1e-11		NR	BCL2L11, MIR4435-2HG	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs10885405	?	1e-11		NR	TCF7L2	breast cancer, body fat distribution	GCST90693333	40874817	Wang S
+rs6585199	?	1e-11		NR	TCF7L2	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs56069439	A	1e-11	1.13	0.23	ANKLE1	breast cancer	GCST90296719	38741014	Jia G
+rs1019806	?	1e-11		NR	ATG10	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs10761785	?	1e-11		NR	REEP3	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs891903	?	1e-11		NR	EBF1	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs7602658	?	1e-11		NR	DIRC3	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs2183271	?	1e-11		NR	MLLT10	abdominal adipose tissue measurement, breast cancer	GCST90693345	40874817	Wang S
+rs72807264	A	1e-11		NR	CPEB3	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs2075881	T	1e-11		NR	AKAP9, CYP51A1	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs35874463	?	1e-11		NR	SMAD3	breast cancer, body fat distribution	GCST90693337	40874817	Wang S
+rs2045438	?	1e-11		NR	MC4R, RNU4-17P	breast cancer, body fat distribution	GCST90693333	40874817	Wang S
+rs117191384	C	1e-11		NR	PTHLH, RN7SKP15	COVID-19, breast cancer	GCST90296488	37636041	Zhao X
+rs16963205	T	2e-11	1.13	0.75	GAREM1	breast cancer	GCST90296719	38741014	Jia G
+rs2277509	C	2e-11		NR	CCDC88C	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs79461387	?	2e-11		NR	ATAD5	breast cancer, body fat distribution	GCST90693337	40874817	Wang S
+rs11599804	?	2e-11	1.25	NR	FGFR2	breast cancer	GCST90837512	41298473	Koyama S
+rs11599804	?	2e-11	1.26	NR	FGFR2	breast cancer	GCST90837513	41298473	Koyama S
+rs12943500	?	2e-11		NR	TOM1L2	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs6743060	?	2e-11		NR	TMEM18, LINC01875	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs7279893	?	2e-11		NR	CYCSP42, LINC02920	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs7948839	C	2e-11		NR	PC	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs2277509	C	2e-11		NR	CCDC88C	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs79461387	?	2e-11		NR	ATAD5	breast cancer, body fat distribution	GCST90693337	40874817	Wang S
+rs11599804	?	2e-11	1.25	NR	FGFR2	breast cancer	GCST90837512	41298473	Koyama S
+rs11599804	?	2e-11	1.26	NR	FGFR2	breast cancer	GCST90837513	41298473	Koyama S
+rs12943500	?	2e-11		NR	TOM1L2	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs6743060	?	2e-11		NR	TMEM18, LINC01875	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs7279893	?	2e-11		NR	CYCSP42, LINC02920	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs7948839	C	2e-11		NR	PC	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs12273982	?	3e-11		NR	AP5B1, KRT8P26	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs4704953	?	3e-11		NR	EBF1	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs6711254	?	3e-11		NR	TMEM18, LINC01875	breast cancer, body fat distribution	GCST90693333	40874817	Wang S
+rs10069690	?	3e-11		NR	TERT	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs1051613	?	3e-11		NR	TMEM175	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs1519900	T	3e-11		NR	RN7SKP203, USP21P2	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs111423688	A	3e-11		NR	PLEKHM1	COVID-19, breast cancer	GCST90296488	37636041	Zhao X
+rs12478439	?	3e-11		NR	LINC02831	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs17584626	?	3e-11		NR	CDKAL1	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs17024258	?	3e-11		NR	GNAT2	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs7113953	?	3e-11		NR	MYEOV, LINC02956	breast cancer, body fat distribution	GCST90693341	40874817	Wang S
+rs73169072	T	3e-11		NR	MRTFA	breast cancer	GCST90428116	38538606	Harris BHL
+rs543874	?	3e-11		NR	SEC16B, LINC01741	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs6451770	G	4e-11		NR	MRPS30-DT	breast cancer	GCST90428116	38538606	Harris BHL
+rs11976955	?	4e-11		NR	LINC-PINT, KLF14	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs4971059	G	4e-11		NR	TRIM46	breast cancer, lung cancer	GCST90270343	36819030	Guo H
+rs10761785	?	4e-11		NR	REEP3	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs10069690	?	4e-11		NR	TERT	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs57693796	TTTG	4e-11		NR	MRTFA-AS1, MRTFA	breast cancer	GCST90428116	38538606	Harris BHL
+rs966042	?	4e-11		NR	MIR148A, LINC03007	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs7451021	?	4e-11		NR	L3MBTL3	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs7610060	?	4e-11		NR	PLXND1	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs13207082	A	4.9999999999999995e-11		NR	POM121L2, CDCA7P1	breast cancer, lung cancer	GCST90270343	36819030	Guo H
+rs11244061	T	4.9999999999999995e-11		NR	ABO, Y_RNA	COVID-19, breast cancer	GCST90296488	37636041	Zhao X
+rs62385384	?	6e-11		NR	EBF1	gluteofemoral adipose tissue measurement, breast cancer	GCST90693347	40874817	Wang S
+rs2077177	?	6e-11		NR	HOXC6, HOXC4	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs1051613	?	6e-11		NR	TMEM175	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs10010325	C	6e-11		NR	TET2, TET2-AS1	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs76772124	?	6e-11		NR	RFLNA	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs4930826	A	6e-11		NR	CCDC91	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs495828	G	6.999999999999999e-11		NR	ABO, Y_RNA	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs12680857	?	8e-11		NR	RPL17P33, LINC00589	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs9952980	?	8e-11		NR	SLC14A2	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs6597978	?	9e-11		NR	RPLP2, PNPLA2	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs4752575	A	9e-11		NR	FGFR2, ATE1	breast cancer	GCST90428116	38538606	Harris BHL
+rs9361848	?	9e-11		NR	TENT5A	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs720475	G	9e-11		NR	ARHGEF5	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs9952980	?	1e-10		NR	SLC14A2	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs6569648	?	1e-10		NR	L3MBTL3	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs61938093	T	1e-10		NR	PGAM1P5	breast cancer	GCST90428116	38538606	Harris BHL
+rs372745970	?	1e-10		NR	ARL17B, MAPK8IP1P1	breast cancer, body fat distribution	GCST90693337	40874817	Wang S
+rs1555132	C	1e-10		NR	NOL4L	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs2532363	T	1e-10		NR	ARL17B, MAPK8IP1P1	COVID-19, breast cancer	GCST90296489	37636041	Zhao X
+rs2823084	?	1e-10		NR	CYCSP42, LINC02920	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs9620778	A	2e-10		NR	TTC28	COVID-19, breast cancer	GCST90296488	37636041	Zhao X
+rs4451810	?	2e-10		NR	SSPN, SSPN-AS1	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs7716600	C	2e-10		NR	MRPS30, HCN1	breast cancer	GCST90428116	38538606	Harris BHL
+rs2077177	?	2e-10		NR	HOXC6, HOXC4	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs3808478	?	2e-10		NR	TRPS1	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs79461387	?	2e-10		NR	ATAD5	breast cancer, body fat distribution	GCST90693341	40874817	Wang S
+rs17584626	?	2e-10		NR	CDKAL1	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs17222641	?	2e-10		NR	CYBRD1	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs9383938	G	2e-10	1.47	0.1	ESR1	breast cancer, TP53 mutation status	GCST90435239	38836758	Tjader NP
+rs9851256	?	2e-10		NR	ZBTB38, KRT18P35	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs7952215	?	2e-10		NR	LINC01488, PNCRNA-D	breast cancer, body fat distribution	GCST90693333	40874817	Wang S
+rs5995543	?	2e-10		NR	PLA2G6	gluteofemoral adipose tissue measurement, breast cancer	GCST90693347	40874817	Wang S
+rs62134416	?	2e-10		NR	ANTXR1	breast cancer, body fat distribution	GCST90693337	40874817	Wang S
+rs11205303	?	3e-10		NR	MTMR11	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs56084540	G	3e-10		NR	PAX5	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs62073657	?	3e-10	5.2	NR	ALKBH5	trait in response to tamoxifen, breast cancer	GCST90502829	38501904	Sanchez-Spitman AB
+rs201885052	AC	3e-10		NR	SLC4A7	breast cancer	GCST90428116	38538606	Harris BHL
+rs7078520	?	3e-10		NR	ZMIZ1	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs441116	?	3e-10		NR	RANBP9, MCUR1	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs7251104	?	3e-10		NR	ZC3H4	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs966042	?	3e-10		NR	MIR148A, LINC03007	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs936230	?	3e-10		NR	SCAMP2	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs10771410	?	3e-10		NR	CCDC91	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs115356840	C	3e-10		NR	SLC4A7	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs11592454	?	3e-10		NR	FGFR2, ATE1	breast cancer, body fat distribution	GCST90693341	40874817	Wang S
+rs6929137	A	3e-10		NR	CCDC170	breast cancer	GCST90428116	38538606	Harris BHL
+rs2529287	?	3e-10		NR	CASTOR2, SPDYE12	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs61373376	C	3e-10		NR	GIPR	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs1138714	?	4e-10		NR	PNPLA2	breast cancer, body fat distribution	GCST90693333	40874817	Wang S
+rs16905168	C	4e-10		NR	ZFAT	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs3117574	G	4e-10		NR	MSH5, MSH5-SAPCD1	breast cancer, lung cancer	GCST90270343	36819030	Guo H
+rs4711750	?	4e-10		NR	VEGFA, LINC02537	gluteofemoral adipose tissue measurement, breast cancer	GCST90693347	40874817	Wang S
+rs6957745	?	5e-10		NR	MLXIPL, VPS37D	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs9479090	A	5e-10	1.42	0.11	ESR1	breast cancer, TP53 mutation status	GCST90435239	38836758	Tjader NP
+rs860262	?	5e-10		NR	JAZF1	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs12162265	?	6e-10		NR	NANOS3, MIR23AHG	breast cancer, body fat distribution	GCST90693333	40874817	Wang S
+rs695459	C	6e-10		NR	TTC28	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs2822991	T	6e-10		NR	NRIP1, ASMER1	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs12273982	?	7.000000000000001e-10		NR	AP5B1, KRT8P26	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs62073657	?	7.000000000000001e-10	5.7	NR	ALKBH5	trait in response to tamoxifen, breast cancer	GCST90502828	38501904	Sanchez-Spitman AB
+rs1550623	G	7.000000000000001e-10		NR	CDCA7, RPS2P18	breast cancer, lung cancer	GCST90270343	36819030	Guo H
+rs8102137	?	7.000000000000001e-10		NR	CCNE1, C19orf12	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs10086261	?	7.000000000000001e-10		NR	HNF4G, RNU2-54P	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs10418716	?	7.000000000000001e-10		NR	NFIX	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs1851366	C	8e-10		NR	NEK10	breast cancer	GCST90428116	38538606	Harris BHL
+rs62467945	A	8e-10		NR	FOXP2, MDFIC	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs150138294	?	8e-10		NR	DCST2	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs10219470	?	8e-10		NR	PTHLH, CCDC91	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs10762499	?	8e-10		NR	PRKG1	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs12620484	A	9e-10		NR	ANXA4	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs13244345	A	1e-09		NR	MAD1L1	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs12146254	?	1e-09		NR	TACC2	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs11065822	T	1e-09		NR	CUX2	COVID-19, breast cancer	GCST90296487	37636041	Zhao X
+rs4339739	?	1e-09		NR	LMX1B	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs2275028	?	1e-09	4.5	NR	ABCA4	trait in response to tamoxifen, breast cancer	GCST90502828	38501904	Sanchez-Spitman AB
+rs1478890	C	1e-09		NR	BLK	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs35421192	?	1e-09		NR	MIR23AHG	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs1407850	?	1e-09		NR	RPL36P14, CHCHD4P2	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs4930103	G	2e-09		NR	H19	breast cancer, lung cancer	GCST90270343	36819030	Guo H
+rs114003206	A	2e-09		0.015324	CD9	breast cancer	GCST90104178	35121771	Choe EK
+rs4635969	G	2e-09		NR	TERT, MIR4457	breast cancer, lung cancer	GCST90270343	36819030	Guo H
+rs6001932	A	2e-09		NR	MRTFA	breast cancer	GCST90428116	38538606	Harris BHL
+rs12358916	?	2e-09		NR	RTKN2, ARID5B	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs1121980	A	2e-09		NR	FTO	breast cancer	GCST90428116	38538606	Harris BHL
+rs17764730	?	2e-09		NR	SLC12A2-DT	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs147963055	?	2e-09		NR	RNY4, RN7SL569P	breast cancer, body fat distribution	GCST90693337	40874817	Wang S
+rs2041248	?	2e-09		NR	ADCY9	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs982077	?	2e-09		NR	USP3	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs2965185	?	2e-09		NR	GATAD2A	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs13337678	C	2e-09		NR	GNAO1	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs4947492	G	2e-09	1.03	0.45	EGFR	breast cancer	GCST90652494	39753771	Jia G
+rs7933134	?	2e-09		NR	SIDT2	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs114926827	?	2e-09		NR	SSBP2, SEM1P1	breast cancer, body fat distribution	GCST90693333	40874817	Wang S
+rs2958913	?	2e-09		NR	TOM1L1	breast cancer, body fat distribution	GCST90693333	40874817	Wang S
+rs1550623	G	3.0000000000000004e-09		NR	CDCA7, RPS2P18	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs2532395	?	3.0000000000000004e-09		NR	KANSL1, MAPK8IP1P1	gluteofemoral adipose tissue measurement, breast cancer	GCST90693347	40874817	Wang S
+rs35874463	?	3.0000000000000004e-09		NR	SMAD3	breast cancer, body fat distribution	GCST90693341	40874817	Wang S
+chr6:152440522	C	3.0000000000000004e-09		NR		breast cancer	GCST90428116	38538606	Harris BHL
+rs56005713	C	3.0000000000000004e-09		NR	PLEKHM1	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs142030336	?	3.0000000000000004e-09	12.9	NR	SIPA1L2	trait in response to tamoxifen, breast cancer	GCST90502830	38501904	Sanchez-Spitman AB
+rs777570833	G	3.0000000000000004e-09		NR	FTO	breast cancer	GCST90428116	38538606	Harris BHL
+rs10043344	T	3.0000000000000004e-09		NR	MRPS30, HCN1	breast cancer	GCST90428116	38538606	Harris BHL
+rs74992427	?	3.0000000000000004e-09	7.0	NR	PAG1, ZNF704	trait in response to tamoxifen, breast cancer	GCST90502829	38501904	Sanchez-Spitman AB
+rs4608329	G	3.0000000000000004e-09		NR	CASC16, PHB1P21	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs11051048	?	4e-09		NR	CAPRIN2	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs2941655	?	4e-09		NR	ZFPM2	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs1481012	?	4e-09		NR	ABCG2	breast cancer, body mass index	GCST90693320	40874817	Wang S
+chr5:44706498	?	4e-09		NR		breast cancer	GCST90840648	42065926	Bogumil D
+rs4391763	C	5e-09	0.83	0.3152	HTRA1	breast cancer	GCST90319677	37851288	Hsu YC
+rs13427672	?	5e-09		NR	DNMT3A	breast cancer, body fat distribution	GCST90693337	40874817	Wang S
+rs62394365	T	5e-09	1.09	0.82	HSPE1P10, BOLA3P3	breast cancer	GCST90652494	39753771	Jia G
+rs12999687	?	5e-09		NR	DNMT3A	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs118042719	?	5e-09	11.0	NR	HS6ST3	trait in response to tamoxifen, breast cancer	GCST90502827	38501904	Sanchez-Spitman AB
+rs4743687	C	5e-09		NR	SMC2	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs72702772	?	5e-09		NR	TRAF3, RCOR1	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs13212534	G	6.000000000000001e-09		NR	TRIM38	breast cancer, lung cancer	GCST90270343	36819030	Guo H
+rs902159	?	6.000000000000001e-09		NR	FILIP1L, CMSS1	breast cancer, body fat distribution	GCST90693341	40874817	Wang S
+rs2899297	?	7.000000000000001e-09		NR	PLA2G6	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs61964388	?	7.000000000000001e-09		NR	DLEU1	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs2587505	?	7.000000000000001e-09		NR	LINC01977	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs6750813	C	7.000000000000001e-09	1.13	0.83	LINC01101, Y_RNA	breast cancer	GCST90296719	38741014	Jia G
+rs55860530	C	7.000000000000001e-09		NR	TLR12P, PHC2	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs1707302	A	7.000000000000001e-09		NR	P3R3URF-PIK3R3	breast cancer, lung cancer	GCST90270343	36819030	Guo H
+rs4845936	?	7.000000000000001e-09		NR	PEX14	breast cancer, body fat distribution	GCST90693337	40874817	Wang S
+chr11:129474008	T	7.000000000000001e-09		NR		breast cancer	GCST90428116	38538606	Harris BHL
+rs115305897	?	7.000000000000001e-09	4.4	NR	LYST, LINC02768	trait in response to tamoxifen, breast cancer	GCST90502830	38501904	Sanchez-Spitman AB
+rs11988260	?	7.000000000000001e-09	4.3	NR	SLC16A14P1, OXR1	trait in response to tamoxifen, breast cancer	GCST90502828	38501904	Sanchez-Spitman AB
+rs8033381	?	7.000000000000001e-09		NR	CSK	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs116852955	?	8e-09	7.3	NR	EIF5, HMGB3P26	trait in response to tamoxifen, breast cancer	GCST90502828	38501904	Sanchez-Spitman AB
+rs186512276	?	8e-09	7.1	NR	RFC1	trait in response to tamoxifen, breast cancer	GCST90502829	38501904	Sanchez-Spitman AB
+rs34406259	A	8e-09		NR	ST6GAL1	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs73920866	C	8e-09		NR	TNFAIP8L1, SEMA6B	breast cancer	GCST90428116	38538606	Harris BHL
+rs62073657	?	8e-09	5.6	NR	ALKBH5	trait in response to tamoxifen, breast cancer	GCST90502830	38501904	Sanchez-Spitman AB
+rs13718	A	9.000000000000001e-09		NR	HSPA4	breast cancer, lung cancer	GCST90270343	36819030	Guo H
+rs28559898	G	9.000000000000001e-09		NR	PPP1R3B-DT	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs982077	?	9.000000000000001e-09		NR	USP3	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs6860806	?	9.000000000000001e-09		NR	SLC22A4	breast cancer, body fat distribution	GCST90693341	40874817	Wang S
+rs12134456	G	9.000000000000001e-09		NR	GON4L	COVID-19, breast cancer	GCST90296487	37636041	Zhao X
+rs9332408	T	9.000000000000001e-09		NR	HELZ	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs1048433	C	1e-08	1.03	0.39	BBS7	breast cancer	GCST90652494	39753771	Jia G
+rs440292	?	1e-08		NR	PIK3R1, LINC02198	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs6424087	G	1e-08	1.06	0.5	MEGF6, TPRG1L	breast cancer	GCST90652494	39753771	Jia G
+rs74488123	G	1e-08		NR	MOXD1	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs11108165	?	1e-08		NR	PGAM1P5	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs35518536	T	1e-08		NR	GID4	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs9383959	?	1e-08		NR	ESR1	breast cancer, body fat distribution	GCST90693337	40874817	Wang S
+rs2525511	?	1e-08		NR	RAD51B	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs2542943	?	1e-08		NR	RPL21P38, CYBRD1	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs144210048	?	1e-08	7.3	NR	RFC1, RNU6-887P	trait in response to tamoxifen, breast cancer	GCST90502829	38501904	Sanchez-Spitman AB
+rs62235635	A	1e-08		NR	PITPNB	breast cancer	GCST90428116	38538606	Harris BHL
+rs2641431	?	1e-08		NR	SMG6	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs548980	T	1e-08		NR	RPL36P14, CHCHD4P2	breast cancer	GCST90428116	38538606	Harris BHL
+rs2277339	?	1e-08		NR	HSD17B6, PRIM1	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs7911140	A	1e-08		NR	LINC02929	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs78374001	G	1e-08		NR	SST, LINC02041	breast cancer	GCST90428116	38538606	Harris BHL
+rs12478439	?	1e-08		NR	LINC02831	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs17764730	?	1e-08		NR	SLC12A2-DT	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs11680869	A	1e-08		NR	LRPPRC, PPM1B-DT	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs61584789	A	1e-08		NR	OTUD7B, RPL6P31	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs144423980	T	1e-08		0.013964	CDH8	breast cancer	GCST90104178	35121771	Choe EK
+rs61751053	T	1e-08	1.48	0.01	ARHGEF38	breast cancer	GCST90296719	38741014	Jia G
+rs11159247	?	1e-08		NR	LINC02289, LINC02288	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs1541409	C	1e-08		NR	BAIAP2L1	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs62235681	G	1e-08		NR	CHEK2, TTC28	breast cancer	GCST90428116	38538606	Harris BHL
+rs873994	C	1e-08		NR	CDYL2	breast cancer	GCST90428116	38538606	Harris BHL
+rs1477944	?	1e-08		NR	XKR9	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs9383586	?	1e-08		NR	CCDC170	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs1351629	A	2e-08		NR	SRRM1P2, CYP51A1P1	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs34724453	?	2e-08		NR	LINC00709, LINC02676	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs833373	?	2e-08		NR	BTAF1, CPEB3	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs76396351	?	2e-08	4.0	NR	KLHL5	trait in response to tamoxifen, breast cancer	GCST90502829	38501904	Sanchez-Spitman AB
+rs76859653	?	2e-08		NR	HMCN1	breast cancer, cognitive domain measurement	GCST90297546	37296840	Nudelman K
+rs4602255	?	2e-08		NR	ANTXR1	breast cancer, body fat distribution	GCST90693341	40874817	Wang S
+rs8108461	?	2e-08		NR	DOT1L	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs13157978	?	2e-08		NR	SSBP2	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs4810474	?	2e-08		NR	ZSWIM3	breast cancer, body fat distribution	GCST90693337	40874817	Wang S
+rs62070652	?	2e-08		NR	ATAD5	gluteofemoral adipose tissue measurement, breast cancer	GCST90693347	40874817	Wang S
+rs10418716	?	2e-08		NR	NFIX	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs17542768	A	2e-08	1.24	0.95	FGFR2	breast cancer	GCST90296719	38741014	Jia G
+rs5743794	?	2e-08		NR	TLR1, TLR6	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs78786199	?	2e-08		NR	VN1R18P, RN7SKP224	breast cancer, cognitive domain measurement	GCST90297546	37296840	Nudelman K
+rs224121	A	2e-08		NR	ALDH7A1P4, LINC02929	breast cancer, lung cancer	GCST90270343	36819030	Guo H
+rs1292011	G	2e-08		NR	UBA52P7, TBX3-AS1	breast cancer	GCST90428116	38538606	Harris BHL
+rs776309300	T	2e-08		NR	CBLN2, LINC01899	breast cancer	GCST90428116	38538606	Harris BHL
+rs4845936	?	2e-08		NR	PEX14	breast cancer, body fat distribution	GCST90693341	40874817	Wang S
+rs76396351	?	2e-08	4.4	NR	KLHL5	trait in response to tamoxifen, breast cancer	GCST90502828	38501904	Sanchez-Spitman AB
+rs35580886	T	2e-08		NR	PPM1B-DT	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs13017937	C	2e-08		NR	TEX41	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs4967978	C	2e-08		NR	USP31	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs12332693	A	2e-08		NR	EBF1	breast cancer	GCST90428116	38538606	Harris BHL
+rs35240111	C	2e-08	1.1	0.33	ESR1	breast cancer	GCST90296719	38741014	Jia G
+rs10092241	?	2e-08		NR	HNF4G, RNU2-54P	abdominal adipose tissue measurement, breast cancer	GCST90693345	40874817	Wang S
+rs186512276	?	2e-08	7.5	NR	RFC1	trait in response to tamoxifen, breast cancer	GCST90502828	38501904	Sanchez-Spitman AB
+rs12062935	?	2e-08	4.4	NR	ABCA4, MTCO1P21	trait in response to tamoxifen, breast cancer	GCST90502828	38501904	Sanchez-Spitman AB
+rs2487826	T	2e-08		NR	CDKN2C, MIR4421	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs11249433	G	2e-08		NR	EMBP1	breast cancer	GCST90428116	38538606	Harris BHL
+rs1436878	?	2e-08		NR	RPL17P25, RPSAP72	breast cancer, body fat distribution	GCST90693333	40874817	Wang S
+rs1052067	A	3.0000000000000004e-08		NR	PMF1, PMF1-BGLAP	COVID-19, breast cancer	GCST90296487	37636041	Zhao X
+rs1010437	?	3.0000000000000004e-08		NR	CEP162, LINC01611	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs206970	?	3.0000000000000004e-08		NR	COX6A1, RPS27P25	breast cancer, body mass index	GCST90693320	40874817	Wang S
+rs12943500	?	3.0000000000000004e-08		NR	TOM1L2	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs146347502	?	3.0000000000000004e-08	6.2	NR	RN7SKP46, SLC66A1LP	trait in response to tamoxifen, breast cancer	GCST90502827	38501904	Sanchez-Spitman AB
+rs4810474	?	3.0000000000000004e-08		NR	ZSWIM3	breast cancer, body fat distribution	GCST90693341	40874817	Wang S
+rs4451810	?	3.0000000000000004e-08		NR	SSPN, SSPN-AS1	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs11917797	?	3.0000000000000004e-08	6.3	NR	RN7SKP46, SLC66A1LP	trait in response to tamoxifen, breast cancer	GCST90502827	38501904	Sanchez-Spitman AB
+rs17164683	?	3.0000000000000004e-08		NR	CDK6	breast cancer, body fat distribution	GCST90693341	40874817	Wang S
+rs17164683	?	3.0000000000000004e-08		NR	CDK6	breast cancer, body fat distribution	GCST90693337	40874817	Wang S
+rs4968455	?	3.0000000000000004e-08		NR	INTS2	breast cancer, waist-hip ratio	GCST90693325	40874817	Wang S
+rs78697264	?	3.0000000000000004e-08	6.1	NR	WDR19	trait in response to tamoxifen, breast cancer	GCST90502829	38501904	Sanchez-Spitman AB
+rs243260	G	3.0000000000000004e-08		NR	SH3GL1	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs11924202	?	3.0000000000000004e-08	6.5	NR	RSRC1	trait in response to tamoxifen, breast cancer	GCST90502827	38501904	Sanchez-Spitman AB
+rs199534	T	3.0000000000000004e-08		NR	NSF	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs2524005	G	4e-08		NR	POLR1HASP	breast cancer, lung cancer	GCST90270343	36819030	Guo H
+rs147963055	?	4e-08		NR	RNY4, RN7SL569P	breast cancer, body fat distribution	GCST90693341	40874817	Wang S
+rs2057968	G	4e-08	1.03	0.42	SLC6A9, KRT8P47	breast cancer	GCST90652494	39753771	Jia G
+rs9878602	T	4e-08		NR	FOXP1	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H
+rs1445998	G	4e-08		NR	MIER3, RLIG1P1	breast cancer	GCST90428116	38538606	Harris BHL
+rs10816634	C	4e-08		NR	RPL36P14, CHCHD4P2	breast cancer	GCST90428116	38538606	Harris BHL
+rs3744311	?	4e-08		NR	LINC00511	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs62072499	?	4e-08	5.4	NR	ALKBH5, LLGL1	trait in response to tamoxifen, breast cancer	GCST90502829	38501904	Sanchez-Spitman AB
+rs142410477	A	4e-08		0.009886	CCNJP1, RNU6-1335P	breast cancer	GCST90104178	35121771	Choe EK
+rs145543257	C	4e-08		0.01347	CDC42EP3-AS1, PIRAT1	breast cancer	GCST90104178	35121771	Choe EK
+rs2163805	?	4e-08		NR	GATAD2A	breast cancer, body fat distribution	GCST90693337	40874817	Wang S
+rs2277339	T	4e-08		NR	HSD17B6, PRIM1	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs4808616	C	4e-08		NR	ABHD8	breast cancer, lung cancer	GCST90270343	36819030	Guo H
+rs62182691	?	4e-08	3.7	NR	KIF5C	trait in response to tamoxifen, breast cancer	GCST90502829	38501904	Sanchez-Spitman AB
+rs1427933	G	4e-08		NR	EBF1	breast cancer	GCST90428116	38538606	Harris BHL
+chr9:110303808	T	5e-08		NR		breast cancer	GCST90428116	38538606	Harris BHL
+rs10948800	A	5e-08		NR	RANBP9, NOL7	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs12128234	T	5e-08		NR	ERRFI1-DT	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs116852955	?	5e-08	6.0	NR	EIF5, HMGB3P26	trait in response to tamoxifen, breast cancer	GCST90502829	38501904	Sanchez-Spitman AB
+rs665751	T	5e-08		NR	SEMA6D	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs144210048	?	5e-08	7.6	NR	RFC1, RNU6-887P	trait in response to tamoxifen, breast cancer	GCST90502828	38501904	Sanchez-Spitman AB
+rs139394	?	5e-08		NR	CBX7	abdominal adipose tissue measurement, breast cancer	GCST90693345	40874817	Wang S
+rs34203781	?	5e-08		NR	TFEB	BMI-adjusted waist-hip ratio, breast cancer	GCST90693329	40874817	Wang S
+rs7779018	A	5e-08		NR	CADPS2, FEZF1	chronotype measurement, breast cancer	GCST90651104	37380357	Wu X
+rs73954922	?	5e-08		NR	ACOXL, MIR4435-2HG, ACOXL-AS1	gluteofemoral adipose tissue measurement, breast cancer	GCST90693347	40874817	Wang S
+rs2941478	A	5e-08		NR	HNF4G	breast cancer, ovarian carcinoma	GCST90270342	36819030	Guo H

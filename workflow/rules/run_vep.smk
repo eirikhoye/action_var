@@ -1,16 +1,18 @@
-#rule download_cache:
-#    output:
-#        cache=CACHE
-#    container:
-#        VEP_CONTAINER
-#    shell:
-#        """
-#        singularity exec \
-#            --bind {output.cache}:/opt/vep/.vep \
-#            ensembl-vep.sif \
-#            vep_install -a cf -s homo_sapens_refseq -y GRCh38 \
-#            --CACHEDIR /opt/vep/.vep --CONVERT --NO_HTSLIB
-#        """
+# rules/run_vep.smk
+VAR_EXCEL = config['var_excel']
+HGVS = config['hgvs']
+CACHE_FILE = config['cache_file']
+CACHE_PATH = config['cache_path']
+CACHE_URL = config['cache_url']
+VEP_OUT = config['vep_out']
+VEP_CONTAINER = config['vep_container']
+
+
+
+
+
+
+
 
 rule prepare_hgvs_inpug:
     input:
