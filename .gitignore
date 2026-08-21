@@ -161,3 +161,6 @@ hg19.fa.gz
 
 # ignore resources folder for now
 resources/
+
+
+data/eirik/
