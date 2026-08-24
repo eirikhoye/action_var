@@ -7,7 +7,10 @@
 # --------------------------------------------------------------------------------------
 #include: "rules/run_vep.smk"
 include: "rules/gwas_catalog.smk"
+include: "rules/alphagenome.smk"
 
 rule all:
     input:
         gwas_catalog_outputs(),
+        alphagenome_outputs()
+
