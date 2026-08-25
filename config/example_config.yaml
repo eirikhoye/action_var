@@ -1,0 +1,11 @@
+# ---------------------------------------------------------------------------
+# Modules to run
+# ---------------------------------------------------------------------------
+modules:
+ - alphagenome
+
+# ---------------------------------------------------------------------------
+# Alphagenome bulk score
+# ---------------------------------------------------------------------------
+variants: /storage/mathelierarea/processed/eirikhoy/action_var/data/example_variants.vcf
+scores: /storage/mathelierarea/processed/eirikhoy/action_var/results/example_scores.csv

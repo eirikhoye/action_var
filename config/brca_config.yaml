@@ -22,3 +22,20 @@ gwas_catalog:
   page_size: 200
   request_sleep_seconds: 0.1
   p_value_threshold: 5.0e-8
+
+
+# ---------------------------------------------------------------------------
+# Modules to run
+# ---------------------------------------------------------------------------
+modules:
+ - gwas_catalog
+ - hgvs2vcf
+ - alphagenome
+
+
+# ---------------------------------------------------------------------------
+# Alphagenome bulk score
+# ---------------------------------------------------------------------------
+variants: /storage/mathelierarea/processed/eirikhoy/action_var/data/BRCA1_BRCA2_PALB2_varianter_2025_02_10.csv
+vcf: /storage/mathelierarea/processed/eirikhoy/action_var/results/clinical_gene_variants.vcf
+scores: /storage/mathelierarea/processed/eirikhoy/action_var/results/clinical_gene_scores.csv

@@ -1,16 +1,19 @@
 # --------------------------------------------------------------------------------------
 # GLOBAL VARIABLES
 # --------------------------------------------------------------------------------------
-
+VARIANTS = config['variants']
+SCORES = config['scores']
 # --------------------------------------------------------------------------------------
 # Rules to run
 # --------------------------------------------------------------------------------------
-#include: "rules/run_vep.smk"
-include: "rules/gwas_catalog.smk"
-include: "rules/alphagenome.smk"
+ALL_OUTPUTS = []
 
+#include: "rules/run_vep.smk"
+MODULES = config['modules']
+for module in MODULES:
+    include: f"rules/{module}.smk"
+
+# Define all outputs
 rule all:
     input:
-        gwas_catalog_outputs(),
-        alphagenome_outputs()
-
+        ALL_OUTPUTS
