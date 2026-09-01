@@ -8,12 +8,6 @@ VEP_OUT = config['vep_out']
 VEP_CONTAINER = config['vep_container']
 
 
-
-
-
-
-
-
 rule prepare_hgvs_inpug:
     input:
         var_excel=VAR_EXCEL,
