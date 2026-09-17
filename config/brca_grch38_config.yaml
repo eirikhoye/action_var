@@ -6,8 +6,9 @@ hgvs: /storage/mathelierarea/processed/eirikhoy/action_var/data/BRCA1_BRCA2_PALB
 cache_file: /storage/mathelierarea/processed/eirikhoy/action_var/resources/homo_sapiens_refseq_vep_111_GRCh38.tar.gz
 cache_url: https://ftp.ensembl.org/pub/release-111/variation/indexed_vep_cache/homo_sapiens_refseq_vep_111_GRCh38.tar.gz
 cache_path: /storage/mathelierarea/processed/eirikhoy/action_var/resources/homo_sapiens_refseq/111_GRCh38
-vep_out: /storage/mathelierarea/processed/eirikhoy/action_var/results/vep_output.txt
+vep_out: /storage/mathelierarea/processed/eirikhoy/action_var/results/vep_grch38_output.txt
 vep_container: docker://ensemblorg/ensembl-vep:release_111.0
+assembly: GRCh38
 
 # ---------------------------------------------------------------------------
 # GWAS Catalog fetch configuration
@@ -28,9 +29,9 @@ gwas_catalog:
 # Modules to run
 # ---------------------------------------------------------------------------
 modules:
- - gwas_catalog
+# - gwas_catalog
  - hgvs2vcf
- - alphagenome
+# - alphagenome
 
 
 # ---------------------------------------------------------------------------

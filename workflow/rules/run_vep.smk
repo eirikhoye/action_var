@@ -6,6 +6,13 @@ CACHE_PATH = config['cache_path']
 CACHE_URL = config['cache_url']
 VEP_OUT = config['vep_out']
 VEP_CONTAINER = config['vep_container']
+ASSEMBLY = config['assembly']
+
+def outputs():
+    return [VEP_OUT]
+
+ALL_OUTPUTS.extend(outputs())
+
 
 
 rule prepare_hgvs_inpug:
@@ -44,13 +51,15 @@ rule run_vep:
         cache=CACHE_PATH
     output:
         tab=VEP_OUT
+    params:
+        assembly=ASSEMBLY
     container:
         VEP_CONTAINER
     shell:
         """
         vep --input_file {input.hgvs} --format hgvs \
         --cache --dir_cache resources/ --refseq \
-        --assembly GRCh38 --tab --force_overwrite \
+        --assembly {params.assembly} --tab --force_overwrite \
         --output_file {output.tab}
         """
 
