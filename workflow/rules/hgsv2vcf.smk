@@ -5,10 +5,7 @@ PREFIX = base + "_converted"
 VCF = PREFIX + ".vcf"
 TSV = PREFIX + "_alphagenome.tsv"
 
-def hgvs2vcf_outputs():
-    return [TSV]
-
-ALL_OUTPUTS.extend(hgvs2vcf_outputs())
+VCF, TSV = register_outputs(VCF, TSV)
 
 rule convert_hgvs2vcf:
     input:

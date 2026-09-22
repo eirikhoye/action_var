@@ -32,7 +32,8 @@ modules:
 # - gwas_catalog
 # - hgvs2vcf
 # - alphagenome
-  - run_vep
+#  - run_vep
+  - var_annot
 
 # ---------------------------------------------------------------------------
 # Alphagenome bulk score
@@ -40,3 +41,14 @@ modules:
 variants: /storage/mathelierarea/processed/eirikhoy/action_var/data/BRCA1_BRCA2_PALB2_varianter_2025_02_10.csv
 vcf: /storage/mathelierarea/processed/eirikhoy/action_var/results/clinical_gene_variants.vcf
 scores: /storage/mathelierarea/processed/eirikhoy/action_var/results/clinical_gene_scores.csv
+
+
+# ---------------------------------------------------------------------------
+# Annotate ExpectoSC variants
+# ---------------------------------------------------------------------------
+GRCh37_url: https://ftp.ensembl.org/pub/grch37/current/gtf/homo_sapiens/Homo_sapiens.GRCh37.87.gtf.gz
+GRCh37_path: resources/Homo_sapiens.GRCh37.87.gtf.gz
+expecto_scores: /storage/mathelierarea/processed/eirikhoy/action_var/data/eirik/Seqweaver_bridges__breast.csv
+expecto_runfile: /storage/mathelierarea/processed/eirikhoy/action_var/data/eirik/Seqweaver_bridges34_genes_input.RUNFILE.csv
+annotated_variants: /storage/mathelierarea/processed/eirikhoy/action_var/results/expecto_annotated_variants.csv
+z_threshold: 2.0
