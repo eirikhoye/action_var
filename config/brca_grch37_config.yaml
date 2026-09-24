@@ -48,7 +48,9 @@ scores: /storage/mathelierarea/processed/eirikhoy/action_var/results/clinical_ge
 # ---------------------------------------------------------------------------
 GRCh37_url: https://ftp.ensembl.org/pub/grch37/current/gtf/homo_sapiens/Homo_sapiens.GRCh37.87.gtf.gz
 GRCh37_path: resources/Homo_sapiens.GRCh37.87.gtf.gz
-expecto_scores: /storage/mathelierarea/processed/eirikhoy/action_var/data/eirik/Seqweaver_bridges__breast.csv
+#expecto_scores: /storage/mathelierarea/processed/eirikhoy/action_var/data/eirik/Seqweaver_bridges__breast.csv
+expecto_scores: /storage/mathelierarea/processed/eirikhoy/action_var/workflow/notebooks/concordant_variants_breast_epithelial.csv
 expecto_runfile: /storage/mathelierarea/processed/eirikhoy/action_var/data/eirik/Seqweaver_bridges34_genes_input.RUNFILE.csv
-annotated_variants: /storage/mathelierarea/processed/eirikhoy/action_var/results/expecto_annotated_variants.csv
+#annotated_variants: /storage/mathelierarea/processed/eirikhoy/action_var/results/expecto_annotated_variants.csv
+annotated_variants: /storage/mathelierarea/processed/eirikhoy/action_var/results/expecto_annotated_concordant_breast_epithelial_variants.csv
 z_threshold: 2.0
