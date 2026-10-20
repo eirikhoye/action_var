@@ -3,6 +3,8 @@
 # --------------------------------------------------------------------------------------
 VARIANTS = config['variants']
 SCORES = config['scores']
+
+
 # --------------------------------------------------------------------------------------
 # Rules to run
 # --------------------------------------------------------------------------------------
@@ -11,7 +13,6 @@ ALL_OUTPUTS = []
 def register_outputs(*paths):
     ALL_OUTPUTS.extend(paths)
     return paths
-
 
 #include: "rules/run_vep.smk"
 MODULES = config['modules']

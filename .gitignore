@@ -164,3 +164,26 @@ resources/
 
 
 data/eirik/
+
+vep_cache*
+*cache*
+
+
+# Containers (large binary images)
+containers/
+*.sif
+
+# Data
+data/
+
+# Generated figures/tables from notebooks
+workflow/notebooks/**/*.svg
+workflow/notebooks/**/*.png
+workflow/notebooks/**/*.pdf
+workflow/notebooks/**/*.csv
+workflow/notebooks/*_figures/
+*.svg
+*.png
+*.pdf
+*.csv
+*_figures/

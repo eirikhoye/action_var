@@ -29,6 +29,8 @@ gwas_catalog:
 # Modules to run
 # ---------------------------------------------------------------------------
 modules:
+  - hg19_hg39
+  - process_variants
 # - gwas_catalog
 # - hgvs2vcf
 # - alphagenome
