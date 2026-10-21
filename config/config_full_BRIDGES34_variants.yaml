@@ -1,0 +1,21 @@
+# ---------------------------------------------------------------------------
+# Input variants
+# ---------------------------------------------------------------------------
+variants: /storage/mathelierarea/processed/eirikhoy/action_var/data/new_bridges_data/bridges_34genes.csv
+variants_build: hg19          # liftover to hg38 runs automatically if not hg38
+
+# ---------------------------------------------------------------------------
+# Modules to run
+# ---------------------------------------------------------------------------
+modules:
+  - annotate_vep
+
+# ---------------------------------------------------------------------------
+# Liftover (optional overrides)
+# ---------------------------------------------------------------------------
+liftover:
+  output: test/bridges_34_genes_hg38.csv
+
+
+vep:
+  output: test/bridges_34genes_vep.vcf

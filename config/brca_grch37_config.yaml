@@ -29,13 +29,20 @@ gwas_catalog:
 # Modules to run
 # ---------------------------------------------------------------------------
 modules:
-  - hg19_hg39
-  - process_variants
+#  - process_variants
 # - gwas_catalog
 # - hgvs2vcf
 # - alphagenome
 #  - run_vep
-  - var_annot
+  - liftover
+  #- var_annot
+
+liftover:
+  from_build: hg19
+  to_build: hg38
+  output: test/
+
+
 
 # ---------------------------------------------------------------------------
 # Alphagenome bulk score

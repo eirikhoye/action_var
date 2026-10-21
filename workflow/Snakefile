@@ -2,7 +2,9 @@
 # GLOBAL VARIABLES
 # --------------------------------------------------------------------------------------
 VARIANTS = config['variants']
-SCORES = config['scores']
+VARIANTS_BUILD = config.get('variants_build', 'hg38')    # build of the input file
+# TODO Push SCORES global variable to relevant modules, or get rid of it
+#SCORES = config['scores']
 
 
 # --------------------------------------------------------------------------------------
@@ -15,7 +17,15 @@ def register_outputs(*paths):
     return paths
 
 #include: "rules/run_vep.smk"
-MODULES = config['modules']
+MODULES = list(config.get('modules', []))
+if VARIANTS_BUILD != 'hg38' and 'liftover' not in MODULES:
+    MODULES.append('liftover')
+# liftover must be included first, since it (re)defines VARIANTS_HG38
+MODULES = sorted(MODULES, key=lambda m: m!= 'liftover')
+
+# Default: input is already hg38. liftover.smk overrides this when included
+VARIANTS_HG38 = VARIANTS
+
 for module in MODULES:
     include: f"rules/{module}.smk"
 

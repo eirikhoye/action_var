@@ -1,3 +1,0 @@
-rule liftover:
-    input:
-        
