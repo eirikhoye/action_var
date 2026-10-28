@@ -64,4 +64,4 @@ VariantID;Chromosome;Position;Ref;Alt
 
 Rule graph for `config/config_full_BRIDGES34_variants.yaml`:
 
-![Snakemake DAG for config_full_BRIDGES34_variants](config_full_BRIDGES34_variants.svg)
+![Snakemake DAG for config_full_BRIDGES34_variants](config_full_BRIDGES34_variants.png)
