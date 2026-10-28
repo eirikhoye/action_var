@@ -16,6 +16,21 @@ def register_outputs(*paths):
     ALL_OUTPUTS.extend(paths)
     return paths
 
+import shlex
+
+# Config keys for input column names -> CLI flags of the scripts that read variant tables
+_COLUMN_FLAGS = {'id': '--id-col', 'chrom': '--chrom-col', 'pos': '--pos-col',
+                 'ref': '--ref-col', 'alt': '--alt-col'}
+
+def column_args(columns, section):
+    """Turn a config 'columns' mapping into --*-col CLI arguments."""
+    columns = columns or {}
+    unknown = set(columns) - set(_COLUMN_FLAGS)
+    if unknown:
+        raise ValueError(f"{section}: unknown key(s) {sorted(unknown)}; "
+                         f"allowed: {list(_COLUMN_FLAGS)}")
+    return " ".join(f"{_COLUMN_FLAGS[k]} {shlex.quote(str(v))}" for k, v in columns.items())
+
 #include: "rules/run_vep.smk"
 MODULES = list(config.get('modules', []))
 if VARIANTS_BUILD != 'hg38' and 'liftover' not in MODULES:

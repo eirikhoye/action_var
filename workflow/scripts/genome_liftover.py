@@ -23,7 +23,13 @@ A delimited text file (optionally gzipped) with at least these columns::
   ``chr10``). The prefix style of the input is preserved in the output.
 * ``Position`` is 1-based (VCF convention).
 * The separator is detected from the header line unless ``--sep`` is given.
- 
+* Other column names can be given with ``--id-col``, ``--chrom-col``,
+  ``--pos-col``, ``--ref-col`` and ``--alt-col``. The output keeps the input's
+  column names.
+* Further coordinate columns (e.g. an end position or a gene TSS) can be
+  lifted with ``--extra-pos-col COL[:CHROM_COL]`` (repeatable). ``CHROM_COL``
+  defaults to the chromosome column.
+
 Output
 ------
 ``<output>``
@@ -48,7 +54,11 @@ Method and coordinate conventions
   3. it lifts to the minus strand. Ref/Alt would then have to be
      reverse-complemented, which this script deliberately does not do.
   4. its ``Position`` is missing.
- 
+
+* Extra position columns are lifted by the same rules, but a failure there
+  does not drop the variant: the value is left empty, and the number of
+  such values is reported on stderr.
+
 * Only the start coordinate is lifted. This is exact for SNVs. For indels
   or MNVs spanning a chain gap the end coordinate may not be contiguous in
   the target build; such cases are not detected.
@@ -67,7 +77,10 @@ Usage
  
     python genome_liftover.py INPUT OUTPUT [--from-build hg19] [--to-build hg38]
                               [--chain FILE] [--sep SEP]
- 
+                              [--id-col COL] [--chrom-col COL] [--pos-col COL]
+                              [--ref-col COL] [--alt-col COL]
+                              [--extra-pos-col COL[:CHROM_COL] ...]
+
 Examples
 --------
 ::
@@ -93,7 +106,6 @@ Author: Eirik Høye
 
 import argparse
 import codecs
-import os
 import gzip
 import sys
 
@@ -123,6 +135,15 @@ def parse_args(argv=None):
     parser.add_argument("--sep", default=None,
                         help=r"Column separator, e.g. ';' or '\t' "
                              "(default: detected from header line)")
+    parser.add_argument("--id-col",    default="VariantID",  help="Variant ID column (default: %(default)s)")
+    parser.add_argument("--chrom-col", default="Chromosome", help="Chromosome column (default: %(default)s)")
+    parser.add_argument("--pos-col",   default="Position",   help="Position column (default: %(default)s)")
+    parser.add_argument("--ref-col",   default="Ref",        help="Ref allele column (default: %(default)s)")
+    parser.add_argument("--alt-col",   default="Alt",        help="Alt allele column (default: %(default)s)")
+    parser.add_argument("--extra-pos-col", action="append", default=[],
+                        metavar="COL[:CHROM_COL]",
+                        help="Additional 1-based position column to lift, optionally with "
+                             "its own chromosome column (default: --chrom-col). Repeatable")
     return parser.parse_args(argv)
     
 
@@ -145,13 +166,14 @@ def guess_sep(path, candidates=(";", "\t", ",", "|")):
     return best
 
 
-def check_columns(df, path):
-    """Raise ``ValueError`` if any of ``REQUIRED_COLUMNS`` is missing."""
-    missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
+def check_columns(df, path, column_map):
+    """Raise ``ValueError`` if a required column is missing after renaming."""
+    inverse = {v: k for k, v in column_map.items()}
+    missing = [inverse[c] for c in REQUIRED_COLUMNS if c not in df.columns]
     if missing:
         raise ValueError(
             f"{path} is missing column(s) {missing}; found {list(df.columns)}. "
-            "Is the separator correct?")
+            "Check the --*-col options and the separator.")
 
 
 def lift_position(lift, chrom, pos):
@@ -182,29 +204,61 @@ def lift_position(lift, chrom, pos):
     return hit[0][1] + 1
 
 
+def lift_column(lift, chroms, positions):
+    """Lift a column of positions; returns a float Series with NaN for failures."""
+    return pd.Series([lift_position(lift, c, p) for c, p in zip(chroms, positions)],
+                     index=positions.index, dtype="float64")
+
+
+def parse_extra_pos_cols(specs, column_map):
+    """Parse ``COL[:CHROM_COL]`` specs into ``(pos_col, chrom_col)`` pairs.
+
+    Names are given as in the input file and translated through
+    ``column_map``, so the chromosome column may be referred to by its input name.
+    """
+    pairs = []
+    for spec in specs:
+        pos_col, _, chrom_col = spec.partition(":")
+        if pos_col in column_map:
+            raise ValueError(f"--extra-pos-col {pos_col!r} is already one of the --*-col columns")
+        chrom_col = column_map.get(chrom_col, chrom_col) if chrom_col else "Chromosome"
+        pairs.append((pos_col, chrom_col))
+    return pairs
+
+
 def main(argv=None):
-    args = parse_args()
+    args = parse_args(argv)
     sep = codecs.decode(args.sep, "unicode_escape") if args.sep \
         else guess_sep(args.variants_csv)
 
-    variants = pd.read_csv(args.variants_csv, sep=sep)
-    check_columns(variants, args.variants_csv)
-    
+    column_map = {
+        args.id_col:    "VariantID",
+        args.chrom_col: "Chromosome",
+        args.pos_col:   "Position",
+        args.ref_col:   "Ref",
+        args.alt_col:   "Alt",
+    }
+    if len(column_map) != len(REQUIRED_COLUMNS):
+        raise ValueError("The same input column was given for more than one --*-col option")
+    inverse_map = {v: k for k, v in column_map.items()}
+
+    variants = pd.read_csv(args.variants_csv, sep=sep).rename(columns=column_map)
+    check_columns(variants, args.variants_csv, column_map)
+    extra_pos_cols = parse_extra_pos_cols(args.extra_pos_col, column_map)
+    missing = sorted({c for pair in extra_pos_cols for c in pair} - set(variants.columns))
+    if missing:
+        raise ValueError(f"--extra-pos-col: column(s) {missing} not found in {args.variants_csv}")
+
     lift = LiftOver(args.chain) if args.chain \
         else LiftOver(args.from_build, args.to_build)
 
-    lifted = pd.Series(
-        [lift_position(lift, c, p)
-         for c, p in zip(variants["Chromosome"], variants["Position"])],
-        index=variants.index,
-        dtype='float64'
-    )
+    lifted = lift_column(lift, variants["Chromosome"], variants["Position"])
     failed = lifted.isna()
 
     print(f"{failed.sum()}/{len(variants)} variants failed to lift", file=sys.stderr)
     if failed.any():
         unmapped_path = args.output + ".unmapped"
-        variants[failed].to_csv(unmapped_path, sep=sep, index=False)
+        variants[failed].rename(columns=inverse_map).to_csv(unmapped_path, sep=sep, index=False)
         print(f"Unmapped variants written to {unmapped_path}", file=sys.stderr)
 
     variants = variants[~failed].copy()
@@ -214,7 +268,14 @@ def main(argv=None):
                              + variants['Ref'].astype(str) + '_' 
                              + variants['Alt'].astype(str))
 
-    variants.to_csv(args.output, sep=sep, index=False)
+    for pos_col, chrom_col in extra_pos_cols:
+        lifted_extra = lift_column(lift, variants[chrom_col], variants[pos_col])
+        n_failed = (lifted_extra.isna() & variants[pos_col].notna()).sum()
+        print(f"{pos_col}: {n_failed}/{len(variants)} values failed to lift (left empty)",
+              file=sys.stderr)
+        variants[pos_col] = lifted_extra.astype("Int64")
+
+    variants.rename(columns=inverse_map).to_csv(args.output, sep=sep, index=False)
 
 if __name__ == "__main__":
     main()

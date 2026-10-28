@@ -17,7 +17,9 @@ Input
 A delimited text file (optionally gzipped) with at least these columns::
  
     VariantID;Chromosome;Position;Ref;Alt
- 
+
+* Other column names can be given with ``--id-col``, ``--chrom-col``,
+  ``--pos-col``, ``--ref-col`` and ``--alt-col``.
 * Coordinates must be **GRCh38**, 1-based.
 * ``Chromosome`` may be given with or without a ``chr`` prefix.
 * Rows with a missing ``Position``, ``Ref`` or ``Alt`` are dropped, and the
@@ -40,7 +42,7 @@ VEP configuration
 VEP is run with::
  
     --cache --offline --refseq --use_given_ref --assembly GRCh38
-    --format vcf --vcf --force_overwrite
+    --mane --format vcf --vcf --force_overwrite
  
 * ``--refseq`` selects the cache in ``<vep_cache>/homo_sapiens_refseq/``.
   VEP resolves the full path as
@@ -50,6 +52,8 @@ VEP is run with::
   no FASTA is supplied. VEP trusts the REF alleles in the input; they are
   **not** validated against the genome, and HGVS notation is unavailable.
   Supply a GRCh38 FASTA (``--fasta``) instead if either matters.
+* ``--mane`` adds the ``MANE_SELECT`` and ``MANE_PLUS_CLINICAL`` CSQ
+  fields, which vep_report.py uses to pick one transcript per gene.
 * VCF records are written sorted by chromosome name (lexicographic) and
   position. VEP does not require sorted input; the order only aids reading.
 * ``ID`` is set to ``VariantID`` (``.`` if missing); QUAL, FILTER and INFO
@@ -67,6 +71,8 @@ Usage
  
     python annotate_vep.py INPUT VEP_OUT [--sep SEP] [--root DIR]
                            [--vep-img SIF] [--vep-cache DIR]
+                           [--id-col COL] [--chrom-col COL] [--pos-col COL]
+                           [--ref-col COL] [--alt-col COL]
  
 Defaults: ``--vep-img <root>/containers/ensembl-vep.sif``,
 ``--vep-cache <root>/vep_cache``.
@@ -117,7 +123,12 @@ def parse_args(argv=None):
     parser.add_argument("--vep-cache", type=Path, default=None,
                         help="VEP cache dir containing homo_sapiens_refseq/ "
                              "(default: <root>/vep_cache)")
- 
+    parser.add_argument("--id-col",    default="VariantID",  help="Variant ID column (default: %(default)s)")
+    parser.add_argument("--chrom-col", default="Chromosome", help="Chromosome column (default: %(default)s)")
+    parser.add_argument("--pos-col",   default="Position",   help="Position column (default: %(default)s)")
+    parser.add_argument("--ref-col",   default="Ref",        help="Ref allele column (default: %(default)s)")
+    parser.add_argument("--alt-col",   default="Alt",        help="Alt allele column (default: %(default)s)")
+
     args = parser.parse_args(argv)
 
     # Fill path defaults from root
@@ -145,13 +156,14 @@ def guess_sep(path, candidates=(";", "\t", ",", "|")):
     return best
 
 
-def check_columns(df, path):
-    """Raise ``ValueError`` if any of ``REQUIRED_COLUMNS`` is missing."""
-    missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
+def check_columns(df, path, column_map):
+    """Raise ``ValueError`` if a required column is missing after renaming."""
+    inverse = {v: k for k, v in column_map.items()}
+    missing = [inverse[c] for c in REQUIRED_COLUMNS if c not in df.columns]
     if missing:
         raise ValueError(
             f"{path} is missing column(s) {missing}; found {list(df.columns)}. "
-            "Is the separator correct?")
+            "Check the --*-col options and the separator.")
 
 
 def prepare_variants(variants):
@@ -194,6 +206,7 @@ def annotate_vep(vcf_in, vep_out, vep_img, vep_cache):
         '--cache', '--offline', '--refseq', '--use_given_ref',
         '--dir_cache', str(vep_cache),
         '--assembly', 'GRCh38',
+        '--mane',
         '--force_overwrite',
     ], check=True)
 
@@ -203,9 +216,21 @@ def main(argv=None):
     sep = codecs.decode(args.sep, "unicode_escape") if args.sep \
         else guess_sep(args.variants_csv)
 
-    variants = pd.read_csv(args.variants_csv, sep=sep)
-    check_columns(variants, args.variants_csv)
-    variants = prepare_variants(variants)
+    column_map = {
+        args.id_col:    "VariantID",
+        args.chrom_col: "Chromosome",
+        args.pos_col:   "Position",
+        args.ref_col:   "Ref",
+        args.alt_col:   "Alt",
+    }
+    if len(column_map) != len(REQUIRED_COLUMNS):
+        raise ValueError("The same input column was given for more than one --*-col option")
+
+    # Only the canonical columns are needed for the VCF; this also avoids
+    # clashes with unmapped input columns (e.g. one already named "chrom")
+    variants = pd.read_csv(args.variants_csv, sep=sep).rename(columns=column_map)
+    check_columns(variants, args.variants_csv, column_map)
+    variants = prepare_variants(variants[REQUIRED_COLUMNS])
 
     args.vep_out.parent.mkdir(parents=True, exist_ok=True)
     vcf_in = args.vep_out.with_suffix(".input.vcf")
