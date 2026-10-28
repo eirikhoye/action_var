@@ -183,7 +183,6 @@ workflow/notebooks/**/*.pdf
 workflow/notebooks/**/*.csv
 workflow/notebooks/*_figures/
 *.svg
-*.png
 *.pdf
 *.csv
 *_figures/
