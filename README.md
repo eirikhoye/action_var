@@ -59,3 +59,9 @@ VariantID;Chromosome;Position;Ref;Alt
 - **Indels:** use VCF-style representation, where Ref and Alt share the first base (e.g. `GA>G`, `A>AC`). Only the start position is lifted, so long indels are less reliable than SNVs.
 - **Extra columns** are allowed and are passed through unchanged.
 - **Recommended:** remove duplicate rows and left-normalise the variants (e.g. with `bcftools norm`) beforehand. Ref alleles are not checked against the reference genome.
+
+## Workflow DAG
+
+Rule graph for `config/config_full_BRIDGES34_variants.yaml`:
+
+![Snakemake DAG for config_full_BRIDGES34_variants](config_full_BRIDGES34_variants.svg)
