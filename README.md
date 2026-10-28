@@ -34,112 +34,28 @@ Annotation sources it can pull in
 
 # Modules
 
-## Variant liftover and VEP annotation
+## Input variants
 
-Two scripts in `workflow/scripts/` take a variant table in hg19 coordinates, lift it to hg38, and annotate it with Ensembl VEP.
+The `variants` entry in the config file points to a delimited text file (plain or `.gz`) with a header line and one variant per row. These columns are required:
 
-```
-variants (hg19) ──► genome_liftover.py ──► variants (hg38) ──► annotate_vep.py ──► VEP-annotated VCF
-                           │                                          │
-                           └──► <output>.unmapped                     └──► <out>.input.vcf, <out>_summary.html
-```
+| Column | Description |
+|---|---|
+| `VariantID` | Variant identifier, conventionally `<Chromosome>_<Position>_<Ref>_<Alt>` |
+| `Chromosome` | Chromosome, with or without a `chr` prefix (`10` or `chr10`) |
+| `Position` | 1-based position (VCF convention) |
+| `Ref` | Reference allele (A/C/G/T) |
+| `Alt` | Alternate allele (A/C/G/T) |
 
-### Input format
-
-Both scripts read a delimited text file (plain or `.gz`) with at least these columns:
+Example:
 
 ```
 VariantID;Chromosome;Position;Ref;Alt
 10_89624151_C_T;10;89624151;C;T
+10_89624278_GA_G;10;89624278;GA;G
 ```
 
-- `Position` is 1-based (VCF convention).
-- `Chromosome` may be written with or without a `chr` prefix.
-- The separator (`;`, tab, `,` or `|`) is detected from the header line. Use `--sep` to set it explicitly, and quote it in the shell: `--sep ';'`, `--sep '\t'`.
-- Extra columns are allowed and are kept by `genome_liftover.py`.
-
-### `genome_liftover.py`: lift coordinates between builds
-
-Converts `Position` from one genome build to another with UCSC chain files via [pyliftover](https://github.com/konstantint/pyliftover).
-
-```bash
-python workflow/scripts/genome_liftover.py \
-    data/new_bridges_data/bridges_34genes.csv \
-    data/new_bridges_data/bridges_34genes_hg38.csv
-```
-
-| Option | Default | Description |
-|---|---|---|
-| `--from-build` | `hg19` | Source build |
-| `--to-build` | `hg38` | Target build |
-| `--chain` | none | Local chain file, e.g. `hg19ToHg38.over.chain.gz`. Overrides the build options and avoids downloading from UCSC. |
-| `--sep` | detected | Column separator |
-
-**Output**
-
-- `<output>`: same columns, order and separator as the input. `Position` holds the new coordinate, and `VariantID` is rebuilt as `<Chromosome>_<Position>_<Ref>_<Alt>`.
-- `<output>.unmapped`: variants that could not be lifted, in their original coordinates. This file is only written if at least one variant fails.
-
-A variant is treated as unmapped if:
-1. it lies in a region with no chain alignment,
-2. it lifts to a different chromosome,
-3. it lifts to the minus strand (Ref/Alt are not reverse-complemented), or
-4. its `Position` is missing.
-
-**Caveats**
-
-- Only the start position is lifted. This is exact for SNVs, but indels spanning a chain gap are not detected.
-- Ref/Alt are not checked against the hg38 reference.
-- Without `--chain`, the chain file is downloaded and cached in `~/.pyliftover`. Pass `--chain` to pin the exact file used.
-
-### `annotate_vep.py`: annotate with VEP
-
-Writes the variants to a minimal sites-only VCF (VCFv4.2) and runs Ensembl VEP 111 offline in a Singularity container against the local RefSeq cache. **The input must be in GRCh38 coordinates**, which is the output of `genome_liftover.py`.
-
-```bash
-python workflow/scripts/annotate_vep.py \
-    data/new_bridges_data/bridges_34genes_hg38.csv \
-    results/bridges_34genes_vep.vcf
-```
-
-| Option | Default | Description |
-|---|---|---|
-| `--root` | `/storage/mathelierarea/processed/eirikhoy/action_var` | Project root |
-| `--vep-img` | `<root>/containers/ensembl-vep.sif` | VEP Singularity image |
-| `--vep-cache` | `<root>/vep_cache` | Folder containing `homo_sapiens_refseq/` |
-| `--sep` | detected | Column separator |
-
-**Output**
-
-- `<vep_out>`: VEP output in VCF format, with annotations in the `CSQ` INFO field.
-- `<vep_out stem>.input.vcf`: the intermediate VCF passed to VEP, kept for provenance.
-- `<vep_out>_summary.html`: VEP's run summary.
-
-Rows with a missing `Position`, `Ref` or `Alt` are dropped, and the count is reported on stderr. The output folder is created if needed.
-
-**VEP settings:** `--cache --offline --refseq --use_given_ref --assembly GRCh38 --vcf --force_overwrite`
-
-- VEP looks for the cache at `<vep_cache>/homo_sapiens_refseq/111_GRCh38/`. The folder names must not be changed, and the cache version must match the VEP version in the container.
-- The RefSeq cache is BAM-edited, and no FASTA is given, so `--use_given_ref` is required. The REF alleles are therefore **not** validated against the genome, and HGVS notation is unavailable. Add `--fasta` with a GRCh38 FASTA if either is needed.
-- The container is started with `-B /storage`, so all input, output, image and cache paths must lie under `/storage`.
-
-### Required resources
-
-```
-<root>/
-├── containers/ensembl-vep.sif        # Ensembl VEP 111
-└── vep_cache/
-    └── homo_sapiens_refseq/
-        ├── 111_GRCh37/
-        └── 111_GRCh38/
-```
-
-Python dependencies: `pandas`, `numpy`, `pyliftover`, and `pytest` for the tests.
-
-### Tests
-
-```bash
-pytest tests/ -v
-```
-
-The tests in `tests/test_scripts.py` need no network, Singularity or VEP cache. Liftover is tested against a small synthetic chain file with known outcomes: an offset, a chain gap, a chromosome change and a minus-strand hit. VEP is replaced by a fake `singularity` executable that records the command line, so the exact VEP invocation and the generated VCF can be checked.
+- **Separator:** `;`, tab, `,` or `|`, detected from the header line.
+- **Genome build:** set `variants_build` in the config (e.g. `hg19`). If it is not `hg38`, the variants are lifted to hg38 before annotation. Variants that cannot be lifted are written to `<output>.unmapped`.
+- **Indels:** use VCF-style representation, where Ref and Alt share the first base (e.g. `GA>G`, `A>AC`). Only the start position is lifted, so long indels are less reliable than SNVs.
+- **Extra columns** are allowed and are passed through unchanged.
+- **Recommended:** remove duplicate rows and left-normalise the variants (e.g. with `bcftools norm`) beforehand. Ref alleles are not checked against the reference genome.

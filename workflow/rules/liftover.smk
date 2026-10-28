@@ -34,3 +34,4 @@ if LIFTOVER_FROM != LIFTOVER_TO:
             python {params.script} {input.variants} {output.lifted} \
                 --from-build {params.from_build} --to-build {params.to_build} {params.chain}
             """
+
