@@ -7,7 +7,6 @@ from tqdm import tqdm
 import argparse
 
 
-API_KEY = "***REMOVED***"
 dna_model = dna_client.create(API_KEY)
 
 
