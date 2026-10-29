@@ -35,8 +35,13 @@ def column_args(columns, section):
 MODULES = list(config.get('modules', []))
 if VARIANTS_BUILD != 'hg38' and 'liftover' not in MODULES:
     MODULES.append('liftover')
-# liftover must be included first, since it (re)defines VARIANTS_HG38
-MODULES = sorted(MODULES, key=lambda m: m!= 'liftover')
+# Modules are included in dependency order: liftover (re)defines VARIANTS_HG38,
+# annotate_vep defines VARIANTS_VEP, variant_effects defines VARIANT_EFFECTS, ...
+# Modules not listed here keep their config order, after these.
+MODULE_ORDER = ['liftover', 'annotate_vep', 'variant_effects', 'alphagenome', 'sei',
+                'alphagenome_ism']
+MODULES = sorted(MODULES, key=lambda m: MODULE_ORDER.index(m) if m in MODULE_ORDER
+                 else len(MODULE_ORDER))
 
 # Default: input is already hg38. liftover.smk overrides this when included
 VARIANTS_HG38 = VARIANTS

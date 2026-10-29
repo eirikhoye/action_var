@@ -1,11 +1,22 @@
 # ---------------------------------------------------------------------------
-# Modules to run
+# Minimal example: VEP, Denise's effect criteria and AlphaGenome on the
+# non-coding variants. See config_effects_BRIDGES34_variants.yaml for all options.
 # ---------------------------------------------------------------------------
-modules:
- - alphagenome
+variants: /storage/mathelierarea/processed/eirikhoy/action_var/data/example_variants.csv
+variants_build: hg38
 
-# ---------------------------------------------------------------------------
-# Alphagenome bulk score
-# ---------------------------------------------------------------------------
-variants: /storage/mathelierarea/processed/eirikhoy/action_var/data/example_variants.vcf
-scores: /storage/mathelierarea/processed/eirikhoy/action_var/results/example_scores.csv
+modules:
+  - annotate_vep
+  - variant_effects
+  - alphagenome
+
+vep:
+  sift: b
+  polyphen: b
+  report:
+    genes: [BRCA1, BRCA2, PALB2]
+    gtf: https://storage.googleapis.com/alphagenome/reference/gencode/hg38/gencode.v46.annotation.gtf.gz.feather
+
+alphagenome:
+  backend: atlas
+  api_key_file: resources/API_KEY   # git-ignored; never commit the key

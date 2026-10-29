@@ -59,6 +59,28 @@ VEP is run with::
 * ``ID`` is set to ``VariantID`` (``.`` if missing); QUAL, FILTER and INFO
   are ``.``.
  
+Plugins (optional)
+------------------
+``--sift``/``--polyphen`` read predictions from the cache. ``--plugin SPEC``
+(repeatable) is passed to VEP unchanged; the plugin *code* ships with the
+ensembl-vep image, but plugin *data* does not and must be on a bound path.
+The ``annotate_vep`` rule builds these from ``vep.plugins`` in the config;
+the CSQ fields they add are read by classify_variant_effects.py:
+
+=============  ===========================================  =======================
+Plugin         Spec                                         CSQ fields
+=============  ===========================================  =======================
+dbNSFP         ``dbNSFP,<file>,REVEL_score,MetaRNN_score,``  same as the field list
+               ``AlphaMissense_score,AlphaMissense_pred``
+AlphaMissense  ``AlphaMissense,file=<tsv.gz>``              am_class,
+                                                            am_pathogenicity
+REVEL          ``REVEL,file=<tsv.gz>``                      REVEL
+dbscSNV        ``dbscSNV,<file>``                           ada_score, rf_score
+MaxEntScan     ``MaxEntScan,<fordownload dir>``             MaxEntScan_ref/alt/diff
+SpliceAI       ``SpliceAI,snv=<vcf.gz>,indel=<vcf.gz>``     SpliceAI_pred_DS_AG/AL/
+                                                            DG/DL
+=============  ===========================================  =======================
+
 Containers and paths
 --------------------
 The container is run with ``-B /storage``. Input, output, image and cache
@@ -129,6 +151,20 @@ def parse_args(argv=None):
     parser.add_argument("--ref-col",   default="Ref",        help="Ref allele column (default: %(default)s)")
     parser.add_argument("--alt-col",   default="Alt",        help="Alt allele column (default: %(default)s)")
 
+    # Optional effect-prediction annotations (see "Plugins" in the module docstring)
+    parser.add_argument("--sift", choices=["p", "s", "b"], default=None,
+                        help="Add SIFT from the cache: p=prediction, s=score, b=both")
+    parser.add_argument("--polyphen", choices=["p", "s", "b"], default=None,
+                        help="Add PolyPhen from the cache: p=prediction, s=score, b=both")
+    parser.add_argument("--plugin", action="append", default=[], metavar="SPEC",
+                        help="VEP plugin spec, passed as --plugin SPEC (repeatable), "
+                             "e.g. 'dbscSNV,/storage/.../dbscSNV1.1_GRCh38.txt.gz'")
+    parser.add_argument("--dir-plugins", type=Path, default=None,
+                        help="Plugin code directory inside the container (default: VEP's own)")
+    parser.add_argument("--bind", action="append", default=[], metavar="PATH",
+                        help="Extra Singularity bind path, e.g. for plugin data outside /storage "
+                             "(repeatable)")
+
     args = parser.parse_args(argv)
 
     # Fill path defaults from root
@@ -189,18 +225,35 @@ def write_vcf(variants, vcf_path):
             f.write(f"{v.chrom}\t{v.Position}\t{vid}\t{v.Ref}\t{v.Alt}\t.\t.\t.\n")
 
             
-def annotate_vep(vcf_in, vep_out, vep_img, vep_cache):
+def vep_extra_args(sift=None, polyphen=None, plugins=(), dir_plugins=None):
+    """VEP arguments for the optional SIFT/PolyPhen and plugin annotations."""
+    extra = []
+    if sift:
+        extra += ['--sift', sift]
+    if polyphen:
+        extra += ['--polyphen', polyphen]
+    if dir_plugins:
+        extra += ['--dir_plugins', str(dir_plugins)]
+    for spec in plugins:
+        extra += ['--plugin', spec]
+    return extra
+
+
+def annotate_vep(vcf_in, vep_out, vep_img, vep_cache, extra_args=(), binds=()):
     """Run VEP in Singularity on ``vcf_in`` and write ``vep_out``.
- 
+
     Raises
     ------
     subprocess.CalledProcessError
         If VEP exits with a non-zero status.
     """
-    subprocess.run([
-        'singularity', 'exec', '-B', '/storage', str(vep_img), 'vep',
-        '--input_file', str(vcf_in), 
-        '--format', 'vcf', 
+    bind_args = []
+    for path in ['/storage', *binds]:
+        bind_args += ['-B', str(path)]
+    cmd = [
+        'singularity', 'exec', *bind_args, str(vep_img), 'vep',
+        '--input_file', str(vcf_in),
+        '--format', 'vcf',
         '--output_file', str(vep_out),
         '--vcf',
         '--cache', '--offline', '--refseq', '--use_given_ref',
@@ -208,7 +261,10 @@ def annotate_vep(vcf_in, vep_out, vep_img, vep_cache):
         '--assembly', 'GRCh38',
         '--mane',
         '--force_overwrite',
-    ], check=True)
+        *extra_args,
+    ]
+    print('Running:', ' '.join(cmd), file=sys.stderr)
+    subprocess.run(cmd, check=True)
 
 
 def main(argv=None):
@@ -235,7 +291,8 @@ def main(argv=None):
     args.vep_out.parent.mkdir(parents=True, exist_ok=True)
     vcf_in = args.vep_out.with_suffix(".input.vcf")
     write_vcf(variants, vcf_in)
-    annotate_vep(vcf_in, args.vep_out, args.vep_img, args.vep_cache)
+    extra = vep_extra_args(args.sift, args.polyphen, args.plugin, args.dir_plugins)
+    annotate_vep(vcf_in, args.vep_out, args.vep_img, args.vep_cache, extra, args.bind)
 
 
 if __name__ == "__main__":

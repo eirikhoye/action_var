@@ -1,0 +1,89 @@
+# ---------------------------------------------------------------------------
+# BRIDGES 34 genes: VEP + Denise's effect criteria + AlphaGenome + Sei (+ ISM design)
+# Run from the repo root:
+#   snakemake -s workflow/Snakefile --configfile config/config_effects_BRIDGES34_variants.yaml -n
+# ---------------------------------------------------------------------------
+variants: /storage/mathelierarea/processed/eirikhoy/action_var/data/new_bridges_data/bridges_34genes.csv
+variants_build: hg19          # liftover to hg38 runs automatically if not hg38
+
+modules:
+  - annotate_vep
+  - variant_effects
+  - alphagenome
+  - sei
+  # - alphagenome_ism          # design skeleton: steps 1-2 run, 3-5 are stubs
+
+liftover:
+  output: test/new_bridges_data/bridges_34_genes_hg38.csv
+
+# ---------------------------------------------------------------------------
+# VEP, with the annotations for Denise's table
+# ---------------------------------------------------------------------------
+vep:
+  output: test/new_bridges_data/bridges_34genes_vep.vcf
+  sift: b                     # from the cache
+  polyphen: b
+  # Plugin data is not in the container. Download once into resources/vep_plugins
+  # (see README, "Effect prediction") and uncomment:
+  # plugins:
+  #   dbNSFP:
+  #     file: /storage/mathelierarea/processed/eirikhoy/action_var/resources/vep_plugins/dbNSFP4.9a_grch38.gz
+  #     fields: [REVEL_score, MetaRNN_score, AlphaMissense_score, AlphaMissense_pred]
+  #   dbscSNV:
+  #     file: /storage/mathelierarea/processed/eirikhoy/action_var/resources/vep_plugins/dbscSNV1.1_GRCh38.txt.gz
+  #   MaxEntScan:
+  #     dir: /storage/mathelierarea/processed/eirikhoy/action_var/resources/vep_plugins/fordownload
+  #   SpliceAI:
+  #     snv: /storage/mathelierarea/processed/eirikhoy/action_var/resources/vep_plugins/spliceai_scores.raw.snv.hg38.vcf.gz
+  #     indel: /storage/mathelierarea/processed/eirikhoy/action_var/resources/vep_plugins/spliceai_scores.raw.indel.hg38.vcf.gz
+  report:
+    output: test/new_bridges_data/bridges_34genes_vep_report.html
+    genes: [ABRAXAS1, AKT1, ATM, BABAM2, BARD1, BRCA1, BRCA2, BRIP1, CDH1,
+            CHEK2, EPCAM, FANCC, FANCM, GEN1, MEN1, MLH1, MRE11, MSH2, MSH6,
+            MUTYH, NBN, NF1, PALB2, PIK3CA, PMS2, PTEN, RAD50, RAD51C,
+            RAD51D, RECQL, RINT1, STK11, TP53, XRCC2]
+    gtf: https://storage.googleapis.com/alphagenome/reference/gencode/hg38/gencode.v46.annotation.gtf.gz.feather
+
+# ---------------------------------------------------------------------------
+# Denise's thresholds (these are the defaults; listed here for visibility)
+# ---------------------------------------------------------------------------
+variant_effects:
+  thresholds:
+    polyphen_min: 0.85
+    revel_min: 0.6
+    metarnn_min: 0.8
+    dbscsnv_min: 0.9
+    maxentscan_abs_min: 2
+    spliceai_min: 0.5
+    expectosc_abs_z: 1
+  # Ksenia's ExPectoSC z-scores; IDs must match the input VariantID
+  # expectosc:
+  #   table: /storage/mathelierarea/processed/eirikhoy/action_var/data/eirik/ExpectoSC_bridges__breast.csv
+  #   id_col: SNP
+
+# ---------------------------------------------------------------------------
+# AlphaGenome on the non-coding variants
+# ---------------------------------------------------------------------------
+alphagenome:
+  include: noncoding
+  backend: atlas              # SNVs from the Atlas, indels + Atlas misses via the model API
+  ontology_terms: [CL:0002327]   # mammary epithelial cell
+  api_key_file: resources/API_KEY   # git-ignored; or export ALPHAGENOME_API_KEY
+
+# ---------------------------------------------------------------------------
+# Sei
+# ---------------------------------------------------------------------------
+sei:
+  dir: /storage/mathelierarea/processed/eirikhoy/tools/sei-framework
+  run_prefix: conda run --no-capture-output -n sei
+  include: noncoding
+  cuda: false                 # set true and add resources when running step 1 on Fox
+  # resources: {slurm_partition: accel, gpus: 1, runtime: 240, mem_mb: 32000}
+
+# ---------------------------------------------------------------------------
+# ISM design (only used if alphagenome_ism is in modules)
+# ---------------------------------------------------------------------------
+alphagenome_ism:
+  outdir: test/new_bridges_data/ism
+  genes: [BRCA1, BRCA2, PALB2]   # start small; default is all vep.report.genes
+  flank: 100000
