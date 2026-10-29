@@ -1,0 +1,2514 @@
+From 5a2ea8b23f8709164fbe880a2d225ca320297a9f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Eirik=20H=C3=B8ye?= <eirikhoye@gmail.com>
+Date: Thu, 29 Oct 2026 11:10:21 +0100
+Subject: [PATCH] Add effect-prediction modules: VEP plugins, Denise's
+ criteria, AlphaGenome, Sei, ISM design
+
+- annotate_vep: optional SIFT/PolyPhen and VEP plugins (dbNSFP, AlphaMissense,
+  REVEL, dbscSNV, MaxEntScan, SpliceAI) from vep.* config; existing configs unchanged
+- variant_effects: classify_variant_effects.py applies Denise's thresholds on the
+  target-gene MANE transcript (LoF, damaging missense, splicing, optional ExPectoSC)
+- alphagenome: rewritten; non-coding variants, SNVs via the AlphaGenome Atlas,
+  indels and Atlas misses via the model API; batched, cached, breast-ontology and
+  target-gene filtered; API key from resources/API_KEY or $ALPHAGENOME_API_KEY
+- sei: VCF prep, chromatin prediction (CPU or GPU resources), sequence-class scores,
+  merge onto the effects table with Selene ref_match QC
+- alphagenome_ism: design skeleton (regions + Atlas ISM runnable, element calling and
+  Sei steps stubbed), docs/ism_sei_design.md
+- Snakefile: include modules in dependency order
+- Remove hardcoded AlphaGenome API key from score_variants_alphagenome.py and notebooks
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01N8VE78JYyn3a5aYjBi46oh
+---
+ README.md                                     |  66 +++
+ config/config_effects_BRIDGES34_variants.yaml |  89 ++++
+ config/example_config.yaml                    |  25 +-
+ docs/ism_sei_design.md                        |  61 +++
+ workflow/Snakefile                            |   9 +-
+ workflow/notebooks/ag_viz_PTEN.ipynb          |   2 +-
+ .../notebooks/alphagenome_bridges34.ipynb     |   2 +-
+ workflow/notebooks/alphagenome_tutorial.ipynb |  12 +-
+ workflow/rules/alphagenome.smk                | 104 ++++-
+ workflow/rules/alphagenome_ism.smk            | 133 ++++++
+ workflow/rules/annotate_vep.smk               |  73 ++-
+ workflow/rules/sei.smk                        | 120 +++++
+ workflow/rules/variant_effects.smk            |  58 +++
+ workflow/scripts/alphagenome_utils.py         |  66 +++
+ workflow/scripts/annotate_vep.py              |  73 ++-
+ workflow/scripts/classify_variant_effects.py  | 375 ++++++++++++++++
+ workflow/scripts/make_ism_regions.py          |  56 +++
+ workflow/scripts/merge_sei_scores.py          | 109 +++++
+ workflow/scripts/prepare_sei_vcf.py           |  60 +++
+ workflow/scripts/query_alphagenome_atlas.py   | 220 +++++++++
+ .../scripts/score_variants_alphagenome.py     | 422 ++++++++----------
+ .../scripts/select_alphagenome_variants.py    |  56 +++
+ 22 files changed, 1910 insertions(+), 281 deletions(-)
+ create mode 100644 config/config_effects_BRIDGES34_variants.yaml
+ create mode 100644 docs/ism_sei_design.md
+ create mode 100644 workflow/rules/alphagenome_ism.smk
+ create mode 100644 workflow/rules/sei.smk
+ create mode 100644 workflow/rules/variant_effects.smk
+ create mode 100644 workflow/scripts/alphagenome_utils.py
+ create mode 100644 workflow/scripts/classify_variant_effects.py
+ create mode 100644 workflow/scripts/make_ism_regions.py
+ create mode 100644 workflow/scripts/merge_sei_scores.py
+ create mode 100644 workflow/scripts/prepare_sei_vcf.py
+ create mode 100644 workflow/scripts/query_alphagenome_atlas.py
+ create mode 100644 workflow/scripts/select_alphagenome_variants.py
+
+diff --git a/README.md b/README.md
+index 32ea11e..5f55c8c 100644
+--- a/README.md
++++ b/README.md
+@@ -105,3 +105,69 @@ With the current VEP settings, some fields are always empty or missing:
+ - SIFT, PolyPhen and allele frequencies are not included.
+ 
+ To get one entry per variant, add `--pick` to the VEP call in `annotate_vep.py`. By default this prefers MANE Select transcripts, then canonical transcripts, then the most severe consequence. Use `--pick_order` to change this.
++
++## Effect prediction modules
++
++`config/config_effects_BRIDGES34_variants.yaml` runs the full chain. The modules are included in dependency order whatever their order in `modules`:
++
++| Module | Needs | Output |
++|---|---|---|
++| `annotate_vep` | input variants | VEP VCF (+ SIFT, PolyPhen and plugins when configured), `vep_report` HTML and annotated CSV |
++| `variant_effects` | `annotate_vep` | `<vep stem>_effects.tsv`: Denise's criteria per variant, plus a per-gene summary |
++| `alphagenome` | `variant_effects` | `<vep stem>_alphagenome/`: Atlas scores for non-coding SNVs, model-API scores for indels and Atlas misses |
++| `sei` | `variant_effects` | `<vep stem>_sei/variant_effects_sei.tsv`: the effects table plus Sei sequence-class scores |
++| `alphagenome_ism` | `annotate_vep` | design skeleton, see `docs/ism_sei_design.md` |
++
++### Denise's criteria (`variant_effects`)
++
++| Question | Tool | Default threshold | Source |
++|---|---|---|---|
++| Loss of function? | VEP consequence | LoF term (stop gained, frameshift, canonical splice, start lost, transcript ablation) | VEP |
++| Damaging missense? | SIFT | deleterious | VEP cache (`vep.sift`) |
++| | PolyPhen | ≥ 0.85 | VEP cache (`vep.polyphen`) |
++| | AlphaMissense | likely pathogenic | dbNSFP or AlphaMissense plugin |
++| | REVEL | ≥ 0.6 | dbNSFP or REVEL plugin |
++| | MetaRNN | ≥ 0.8 | dbNSFP plugin |
++| Splicing disrupted? | dbscSNV | ADA and RF ≥ 0.9 | dbscSNV plugin |
++| | MaxEntScan | \|diff\| ≥ 2 | MaxEntScan plugin |
++| | SpliceAI | max DS ≥ 0.5 | SpliceAI plugin (precomputed scores) |
++| Expression altered? | ExPectoSC | \|z\| > 1 in any cell type | `variant_effects.expectosc.table` |
++
++Thresholds are set under `variant_effects.thresholds`. Every per-tool flag is NA when the tool gave no value, so a missing plugin shows up as empty columns, and the log lists which tools were found. `damaging_missense` needs at least `missense_min_tools` tools (default 1) *and* a missense consequence; `splice_disrupted` needs `splice_min_tools` (default 1). The consequence is taken on the MANE Select transcript of a target gene; gene and region come from `vep_report`, so distal variants are assigned to the nearest target gene.
++
++### VEP plugin data
++
++The ensembl-vep image contains the plugin code but not the data. Download once into a bound path (e.g. `resources/vep_plugins/`, git-ignored) and list it under `vep.plugins`:
++
++- **dbNSFP** (REVEL, MetaRNN, AlphaMissense in one file; academic licence): https://www.dbnsfp.org. Build the GRCh38 file as described in the dbNSFP plugin header.
++- **dbscSNV 1.1**: from the dbNSFP site; build the GRCh38 file as in the dbscSNV plugin header.
++- **MaxEntScan**: `fordownload.tar.gz` from the Burge lab (`http://hollywood.mit.edu/burgelab/maxent/download/`).
++- **SpliceAI** precomputed scores (`spliceai_scores.raw.{snv,indel}.hg38.vcf.gz`): Illumina BaseSpace, free account, licence terms apply.
++- **AlphaMissense** (alternative to the dbNSFP fields): `https://storage.googleapis.com/dm_alphamissense/AlphaMissense_hg38.tsv.gz`, then `tabix -s 1 -b 2 -e 2 -f -S 1`.
++
++Plugin data versions should match VEP 111; see https://www.ensembl.org/info/docs/tools/vep/script/vep_plugins.html. If VEP cannot find a plugin, check where the image keeps them (`singularity exec containers/ensembl-vep.sif ls /plugins`) and set `vep.dir_plugins`. Check after the first run that the log of `classify_variant_effects` lists SIFT and PolyPhen: the RefSeq cache should carry them, but verify.
++
++### AlphaGenome (`alphagenome`)
++
++- Selects `coding == False` variants (UTR, intron, canonical splice, promoter and distal variants are kept; set `alphagenome.include: all` for everything).
++- `backend: atlas`: SNVs from the AlphaGenome Atlas (stored scores, fast), queried per target gene so gene-level scorers report the effect on that gene. Indels and SNVs the Atlas does not hold go to the model API in batches of `alphagenome.model.batch_size`. `backend: model` sends everything to the model API.
++- Model-API output is filtered to `ontology_terms` (default mammary epithelial cell, CL:0002327) and to the variant's own gene, which keeps the table small.
++- Both steps cache per batch, so an interrupted run resumes.
++- **API key**: `resources/API_KEY` (git-ignored), `$ALPHAGENOME_API_KEY`, or `alphagenome.api_key_file`. Never put it in a script.
++
++Outputs: `atlas_scores.parquet` (one row per variant, one column per track, `|q` = calibrated quantile), `atlas_missing.tsv`, `model_scores.parquet` (long, as `tidy_scores`).
++
++### Sei (`sei`)
++
++One-off setup:
++
++```
++git clone https://github.com/FunctionLab/sei-framework
++cd sei-framework && sh ./download_data.sh        # model + hg19/hg38 FASTA, several GB
++conda create -n sei python=3.9 && conda activate sei
++pip install torch selene-sdk docopt h5py pandas  # pick the torch build for your CUDA, if any
++```
++
++Set `sei.dir` to the checkout and `sei.run_prefix` to how its Python is run (default `conda run --no-capture-output -n sei`). Step 1 (`sei_chromatin`, 21,907 chromatin profiles for ref and alt) is the slow one: on CPU try a small set first, or set `sei.cuda: true` and `sei.resources` (e.g. `{slurm_partition: accel, gpus: 1}`) to run just that rule on a Fox GPU node. Step 1 also writes ref, alt and diff HDF5 files of 21,907 columns per variant, so expect several GB for tens of thousands of variants.
++
++`variant_effects_sei.tsv` adds: `sei_ref_match` (False = the VCF REF did not match Sei's FASTA, so check those), `sei_max_abs`, `sei_top_class` and `sei_top_score`, the signed strongest class per group (`sei_P_max`, `sei_E_max`, `sei_TF_max`, `sei_CTCF_max`, ...), and all 40 classes (`sei_TF3` = FOXA1/AR/ESR1, `sei_E6` = weak epithelial, ...). Scores are alt − ref sequence-class activity, histone-normalised. `sei_sequence_class_scores_long.tsv` has the same scores in long format. Sei is licensed for academic and research use only.
+diff --git a/config/config_effects_BRIDGES34_variants.yaml b/config/config_effects_BRIDGES34_variants.yaml
+new file mode 100644
+index 0000000..c26f217
+--- /dev/null
++++ b/config/config_effects_BRIDGES34_variants.yaml
+@@ -0,0 +1,89 @@
++# ---------------------------------------------------------------------------
++# BRIDGES 34 genes: VEP + Denise's effect criteria + AlphaGenome + Sei (+ ISM design)
++# Run from the repo root:
++#   snakemake -s workflow/Snakefile --configfile config/config_effects_BRIDGES34_variants.yaml -n
++# ---------------------------------------------------------------------------
++variants: /storage/mathelierarea/processed/eirikhoy/action_var/data/new_bridges_data/bridges_34genes.csv
++variants_build: hg19          # liftover to hg38 runs automatically if not hg38
++
++modules:
++  - annotate_vep
++  - variant_effects
++  - alphagenome
++  - sei
++  # - alphagenome_ism          # design skeleton: steps 1-2 run, 3-5 are stubs
++
++liftover:
++  output: test/new_bridges_data/bridges_34_genes_hg38.csv
++
++# ---------------------------------------------------------------------------
++# VEP, with the annotations for Denise's table
++# ---------------------------------------------------------------------------
++vep:
++  output: test/new_bridges_data/bridges_34genes_vep.vcf
++  sift: b                     # from the cache
++  polyphen: b
++  # Plugin data is not in the container. Download once into resources/vep_plugins
++  # (see README, "Effect prediction") and uncomment:
++  # plugins:
++  #   dbNSFP:
++  #     file: /storage/mathelierarea/processed/eirikhoy/action_var/resources/vep_plugins/dbNSFP4.9a_grch38.gz
++  #     fields: [REVEL_score, MetaRNN_score, AlphaMissense_score, AlphaMissense_pred]
++  #   dbscSNV:
++  #     file: /storage/mathelierarea/processed/eirikhoy/action_var/resources/vep_plugins/dbscSNV1.1_GRCh38.txt.gz
++  #   MaxEntScan:
++  #     dir: /storage/mathelierarea/processed/eirikhoy/action_var/resources/vep_plugins/fordownload
++  #   SpliceAI:
++  #     snv: /storage/mathelierarea/processed/eirikhoy/action_var/resources/vep_plugins/spliceai_scores.raw.snv.hg38.vcf.gz
++  #     indel: /storage/mathelierarea/processed/eirikhoy/action_var/resources/vep_plugins/spliceai_scores.raw.indel.hg38.vcf.gz
++  report:
++    output: test/new_bridges_data/bridges_34genes_vep_report.html
++    genes: [ABRAXAS1, AKT1, ATM, BABAM2, BARD1, BRCA1, BRCA2, BRIP1, CDH1,
++            CHEK2, EPCAM, FANCC, FANCM, GEN1, MEN1, MLH1, MRE11, MSH2, MSH6,
++            MUTYH, NBN, NF1, PALB2, PIK3CA, PMS2, PTEN, RAD50, RAD51C,
++            RAD51D, RECQL, RINT1, STK11, TP53, XRCC2]
++    gtf: https://storage.googleapis.com/alphagenome/reference/gencode/hg38/gencode.v46.annotation.gtf.gz.feather
++
++# ---------------------------------------------------------------------------
++# Denise's thresholds (these are the defaults; listed here for visibility)
++# ---------------------------------------------------------------------------
++variant_effects:
++  thresholds:
++    polyphen_min: 0.85
++    revel_min: 0.6
++    metarnn_min: 0.8
++    dbscsnv_min: 0.9
++    maxentscan_abs_min: 2
++    spliceai_min: 0.5
++    expectosc_abs_z: 1
++  # Ksenia's ExPectoSC z-scores; IDs must match the input VariantID
++  # expectosc:
++  #   table: /storage/mathelierarea/processed/eirikhoy/action_var/data/eirik/ExpectoSC_bridges__breast.csv
++  #   id_col: SNP
++
++# ---------------------------------------------------------------------------
++# AlphaGenome on the non-coding variants
++# ---------------------------------------------------------------------------
++alphagenome:
++  include: noncoding
++  backend: atlas              # SNVs from the Atlas, indels + Atlas misses via the model API
++  ontology_terms: [CL:0002327]   # mammary epithelial cell
++  api_key_file: resources/API_KEY   # git-ignored; or export ALPHAGENOME_API_KEY
++
++# ---------------------------------------------------------------------------
++# Sei
++# ---------------------------------------------------------------------------
++sei:
++  dir: /storage/mathelierarea/processed/eirikhoy/tools/sei-framework
++  run_prefix: conda run --no-capture-output -n sei
++  include: noncoding
++  cuda: false                 # set true and add resources when running step 1 on Fox
++  # resources: {slurm_partition: accel, gpus: 1, runtime: 240, mem_mb: 32000}
++
++# ---------------------------------------------------------------------------
++# ISM design (only used if alphagenome_ism is in modules)
++# ---------------------------------------------------------------------------
++alphagenome_ism:
++  outdir: test/new_bridges_data/ism
++  genes: [BRCA1, BRCA2, PALB2]   # start small; default is all vep.report.genes
++  flank: 100000
+diff --git a/config/example_config.yaml b/config/example_config.yaml
+index 26bccd2..0d34adf 100644
+--- a/config/example_config.yaml
++++ b/config/example_config.yaml
+@@ -1,11 +1,22 @@
+ # ---------------------------------------------------------------------------
+-# Modules to run
++# Minimal example: VEP, Denise's effect criteria and AlphaGenome on the
++# non-coding variants. See config_effects_BRIDGES34_variants.yaml for all options.
+ # ---------------------------------------------------------------------------
++variants: /storage/mathelierarea/processed/eirikhoy/action_var/data/example_variants.csv
++variants_build: hg38
++
+ modules:
+- - alphagenome
++  - annotate_vep
++  - variant_effects
++  - alphagenome
+ 
+-# ---------------------------------------------------------------------------
+-# Alphagenome bulk score
+-# ---------------------------------------------------------------------------
+-variants: /storage/mathelierarea/processed/eirikhoy/action_var/data/example_variants.vcf
+-scores: /storage/mathelierarea/processed/eirikhoy/action_var/results/example_scores.csv
++vep:
++  sift: b
++  polyphen: b
++  report:
++    genes: [BRCA1, BRCA2, PALB2]
++    gtf: https://storage.googleapis.com/alphagenome/reference/gencode/hg38/gencode.v46.annotation.gtf.gz.feather
++
++alphagenome:
++  backend: atlas
++  api_key_file: resources/API_KEY   # git-ignored; never commit the key
+diff --git a/docs/ism_sei_design.md b/docs/ism_sei_design.md
+new file mode 100644
+index 0000000..6554975
+--- /dev/null
++++ b/docs/ism_sei_design.md
+@@ -0,0 +1,61 @@
++# Distal-element ISM with the AlphaGenome Atlas, then Sei
++
++Design for `workflow/rules/alphagenome_ism.smk`. Steps 1–2 run today; steps 3–5 are
++stubs to implement.
++
++## Question
++
++Which non-coding positions around each of the 34 BRIDGES genes does AlphaGenome
++predict to change that gene's expression in mammary epithelium? Do those positions
++form distal elements, and what regulatory activity does Sei assign to them and to
++the mutations in them?
++
++The answer gives a map of where variants *could* matter. The observed BRIDGES
++variants (from `variant_effects` and `alphagenome`) can then be read against it.
++
++## Pipeline
++
++| Step | Rule | Status | What it does |
++|---|---|---|---|
++| 1 | `ism_regions` | runs | MANE transcript ± `flank` (default 100 kb) per gene, from the GENCODE feather |
++| 2 | `ism_atlas` | runs | Every SNV in the window from the Atlas (`query_interval`), effects on that gene, in 4 kb cached chunks |
++| 3 | `ism_elements` | stub | Per position, the max-\|effect\| ALT on the gene's RNA-seq track; keep quantile ≥ 0.99 outside the CDS; merge hits within 50 bp; ≥ 3 positions → element BED + top SNVs |
++| 4a | `ism_sei_annotate_elements` | stub | Overlap the elements with Sei's hg38 sequence-class annotation (Zenodo 7113988): what the element *is* (e.g. E6 epithelial enhancer, TF3 FOXA1/AR/ESR1, CTCF). No model run |
++| 4b | `ism_sei_variants` | stub | The top ISM SNVs per element through the Sei steps already in `sei.smk`: what those mutations *do* to chromatin |
++| 5 | `ism_sei_report` | stub | Element map per gene, AlphaGenome vs Sei concordance, overlap with observed BRIDGES variants |
++
++## Choices and their reasons
++
++- **Atlas, not the model API.** The Atlas returns stored scores, so whole-window ISM is a
++  query, not an inference job. That is what `notebooks/alphagenome_atlas_BRCA1.ipynb`
++  already does for BRCA1 (120 kb); `ism_atlas` generalises it per gene. The model API
++  is only needed for indels.
++- **Gene-level RNA-seq effect as the element signal.** It is the quantity that links a
++  distal position to *this* gene. AVI and DNase/histone tracks are kept as columns for
++  interpretation, not for calling.
++- **Calibrated quantile threshold.** The Atlas quantiles make one threshold comparable
++  across genes and tracks; raw log-fold changes are not.
++- **Sei in two ways.** The annotation overlap (4a) is free and tells you what kind of
++  element it is. The variant run (4b) is the like-for-like comparison with AlphaGenome:
++  same SNVs, a chromatin-level model trained on different data. Agreement between the two
++  is the strongest evidence; disagreement is the interesting part to discuss in Princeton.
++
++## Scale
++
++Three ALTs per position, so 1 Mb of window is about 3 M SNVs. With the default
++100 kb flank the 34 windows total roughly 10 Mb (run `ism_regions` to see the exact
++number; it prints it). Start with a few genes (`alphagenome_ism.genes`) to time one
++4 kb chunk, then scale. The chunk cache makes interrupted runs resumable.
++
++Widening `flank` towards 500 kb catches more distal enhancers but multiplies the query
++count. A middle ground is to keep 100 kb for all genes and widen only those whose
++step-3 elements cluster near the window edge.
++
++## Open decisions
++
++1. Ontology: mammary epithelial cell (CL:0002327) only, or add breast tissue / MCF-7
++   tracks? Check `atlas_client.scorer_metadata()` for which exist per scorer.
++2. Element threshold: quantile 0.99 is a starting point. Calibrate it on known elements
++   (for example the BRCA1/NBR2 bidirectional promoter) before trusting distal calls.
++3. Sei for elements: also run Sei sequence prediction on element BEDs (4 kb centred)
++   for elements the genome-wide annotation labels "low signal"?
+diff --git a/workflow/Snakefile b/workflow/Snakefile
+index 0e55535..f9f09aa 100644
+--- a/workflow/Snakefile
++++ b/workflow/Snakefile
+@@ -35,8 +35,13 @@ def column_args(columns, section):
+ MODULES = list(config.get('modules', []))
+ if VARIANTS_BUILD != 'hg38' and 'liftover' not in MODULES:
+     MODULES.append('liftover')
+-# liftover must be included first, since it (re)defines VARIANTS_HG38
+-MODULES = sorted(MODULES, key=lambda m: m!= 'liftover')
++# Modules are included in dependency order: liftover (re)defines VARIANTS_HG38,
++# annotate_vep defines VARIANTS_VEP, variant_effects defines VARIANT_EFFECTS, ...
++# Modules not listed here keep their config order, after these.
++MODULE_ORDER = ['liftover', 'annotate_vep', 'variant_effects', 'alphagenome', 'sei',
++                'alphagenome_ism']
++MODULES = sorted(MODULES, key=lambda m: MODULE_ORDER.index(m) if m in MODULE_ORDER
++                 else len(MODULE_ORDER))
+ 
+ # Default: input is already hg38. liftover.smk overrides this when included
+ VARIANTS_HG38 = VARIANTS
+diff --git a/workflow/notebooks/ag_viz_PTEN.ipynb b/workflow/notebooks/ag_viz_PTEN.ipynb
+index a78172e..44c7759 100644
+--- a/workflow/notebooks/ag_viz_PTEN.ipynb
++++ b/workflow/notebooks/ag_viz_PTEN.ipynb
+@@ -23,7 +23,7 @@
+    "metadata": {},
+    "outputs": [],
+    "source": [
+-    "API_KEY = \"***REMOVED***\"\n",
++    "API_KEY = open(\"/storage/mathelierarea/processed/eirikhoy/action_var/resources/API_KEY\").read().strip()  # git-ignored; never commit the key\n",
+     "\n",
+     "dna_model = dna_client.create(API_KEY)"
+    ]
+diff --git a/workflow/notebooks/alphagenome_bridges34.ipynb b/workflow/notebooks/alphagenome_bridges34.ipynb
+index c3190e7..2cecfaa 100644
+--- a/workflow/notebooks/alphagenome_bridges34.ipynb
++++ b/workflow/notebooks/alphagenome_bridges34.ipynb
+@@ -23,7 +23,7 @@
+    "metadata": {},
+    "outputs": [],
+    "source": [
+-    "API_KEY = \"***REMOVED***\"\n",
++    "API_KEY = open(\"/storage/mathelierarea/processed/eirikhoy/action_var/resources/API_KEY\").read().strip()  # git-ignored; never commit the key\n",
+     "\n",
+     "dna_model = dna_client.create(API_KEY)"
+    ]
+diff --git a/workflow/notebooks/alphagenome_tutorial.ipynb b/workflow/notebooks/alphagenome_tutorial.ipynb
+index 69f9b2f..db2aee0 100644
+--- a/workflow/notebooks/alphagenome_tutorial.ipynb
++++ b/workflow/notebooks/alphagenome_tutorial.ipynb
+@@ -23,7 +23,7 @@
+    "metadata": {},
+    "outputs": [],
+    "source": [
+-    "API_KEY = \"***REMOVED***\"\n",
++    "API_KEY = open(\"/storage/mathelierarea/processed/eirikhoy/action_var/resources/API_KEY\").read().strip()  # git-ignored; never commit the key\n",
+     "\n",
+     "dna_model = dna_client.create(API_KEY)"
+    ]
+@@ -211,7 +211,7 @@
+    "metadata": {},
+    "outputs": [],
+    "source": [
+-    "API_KEY = \"***REMOVED***\"\n",
++    "API_KEY = open(\"/storage/mathelierarea/processed/eirikhoy/action_var/resources/API_KEY\").read().strip()  # git-ignored; never commit the key\n",
+     "\n",
+     "dna_model = dna_client.create(API_KEY)"
+    ]
+@@ -1923,7 +1923,7 @@
+    "metadata": {},
+    "outputs": [],
+    "source": [
+-    "API_KEY = \"***REMOVED***\"\n",
++    "API_KEY = open(\"/storage/mathelierarea/processed/eirikhoy/action_var/resources/API_KEY\").read().strip()  # git-ignored; never commit the key\n",
+     "\n",
+     "dna_model = dna_client.create(API_KEY)"
+    ]
+@@ -3614,7 +3614,7 @@
+     "\n",
+     "\n",
+     "# Load the model.\n",
+-    "API_KEY = \"***REMOVED***\"\n",
++    "API_KEY = open(\"/storage/mathelierarea/processed/eirikhoy/action_var/resources/API_KEY\").read().strip()  # git-ignored; never commit the key\n",
+     "\n",
+     "dna_model = dna_client.create(API_KEY)\n",
+     "\n",
+@@ -4921,7 +4921,7 @@
+    "metadata": {},
+    "outputs": [],
+    "source": [
+-    "API_KEY = \"***REMOVED***\"\n",
++    "API_KEY = open(\"/storage/mathelierarea/processed/eirikhoy/action_var/resources/API_KEY\").read().strip()  # git-ignored; never commit the key\n",
+     "\n",
+     "dna_model = dna_client.create(API_KEY)"
+    ]
+@@ -5909,7 +5909,7 @@
+     "from alphagenome.atlas import atlas\n",
+     "from alphagenome.data import genome\n",
+     "\n",
+-    "API_KEY = \"***REMOVED***\"\n",
++    "API_KEY = open(\"/storage/mathelierarea/processed/eirikhoy/action_var/resources/API_KEY\").read().strip()  # git-ignored; never commit the key\n",
+     "\n",
+     "client = atlas.create(API_KEY)\n",
+     "print(client.scorer_metadata().keys())            # see scorer names first\n",
+diff --git a/workflow/rules/alphagenome.smk b/workflow/rules/alphagenome.smk
+index c74f607..5620796 100644
+--- a/workflow/rules/alphagenome.smk
++++ b/workflow/rules/alphagenome.smk
+@@ -1,22 +1,108 @@
+-# /rules/alphagenome.smk
++# rules/alphagenome.smk
++# Scores the non-coding variants (from variant_effects) with AlphaGenome:
++#   - SNVs from the AlphaGenome Atlas (precomputed scores, fast), when backend = atlas
++#   - indels, and SNVs the Atlas has no scores for, with the model API
++# Requires the variant_effects module. All keys are optional:
++#
++#   alphagenome:
++#     outdir: results/<vep stem>_alphagenome
++#     include: noncoding            # or: all
++#     exclude_regions: []           # region classes from vep_report, e.g. ["3' UTR"]
++#     backend: atlas                # atlas (SNVs) + model (rest); or: model (everything)
++#     ontology_terms: [CL:0002327]  # mammary epithelial cell; [] = all biosamples
++#     api_key_file: resources/API_KEY   # else $ALPHAGENOME_API_KEY; never commit the key
++#     atlas:
++#       scorers: [AVI_SCORE, RNA_SEQ, SPLICE_SITES, DNASE, CAGE, CHIP_HISTONE]
++#       batch_size: 200
++#     model:
++#       scorers: [RNA_SEQ, SPLICE_SITES, SPLICE_SITE_USAGE, SPLICE_JUNCTIONS, DNASE,
++#                 ATAC, CAGE, CHIP_HISTONE, CHIP_TF, POLYADENYLATION]
++#       sequence_length: 1MB        # 16KB, 100KB, 500KB or 1MB
++#       batch_size: 20
++#       all_genes: false            # true: keep gene-level scores for every gene in the window
+ 
+-def alphagenome_outputs():
+-    return [SCORES]
++if 'VARIANT_EFFECTS' not in globals():
++    raise WorkflowError("alphagenome needs the variant_effects module; add it to 'modules'")
+ 
+-ALL_OUTPUTS.extend(alphagenome_outputs())
++AG = config.get('alphagenome') or {}
++AG_DIR = AG.get('outdir', f"{os.path.splitext(VARIANTS_VEP)[0]}_alphagenome")
++AG_BACKEND = AG.get('backend', 'atlas')
++if AG_BACKEND not in ('atlas', 'model'):
++    raise WorkflowError(f"alphagenome.backend must be 'atlas' or 'model', not {AG_BACKEND!r}")
++AG_ONTOLOGY = shlex.quote(','.join(AG.get('ontology_terms', ['CL:0002327'])))
++AG_KEY_ARG = f"--api-key-file {shlex.quote(AG['api_key_file'])}" if AG.get('api_key_file') else ""
++_AG_ATLAS = AG.get('atlas') or {}
++_AG_MODEL = AG.get('model') or {}
+ 
++AG_SNV = f"{AG_DIR}/input_snv.tsv"
++AG_OTHER = f"{AG_DIR}/input_other.tsv"
++AG_ATLAS = f"{AG_DIR}/atlas_scores.parquet"
++AG_ATLAS_MISSING = f"{AG_DIR}/atlas_missing.tsv"
++AG_MODEL = f"{AG_DIR}/model_scores.parquet"
+ 
++ALL_OUTPUTS.append(AG_MODEL)
++if AG_BACKEND == 'atlas':
++    ALL_OUTPUTS.append(AG_ATLAS)
+ 
+-rule score_variants_alphagenome:
++
++rule alphagenome_select:
+     input:
+-        tsv=VARIANTS
++        effects=VARIANT_EFFECTS
+     output:
+-        scores=SCORES
++        snv=AG_SNV,
++        other=AG_OTHER,
+     params:
+-        script="workflow/scripts/score_variants_alphagenome.py"
++        script="workflow/scripts/select_alphagenome_variants.py",
++        include=AG.get('include', 'noncoding'),
++        exclude=shlex.quote(','.join(AG.get('exclude_regions') or [])),
+     shell:
+         """
+-        python {params.script} {input.tsv} {output.scores}
++        python {params.script} {input.effects} {output.snv} {output.other} \
++            --include {params.include} --exclude-regions {params.exclude}
+         """
+ 
+ 
++rule alphagenome_atlas:
++    input:
++        snv=AG_SNV
++    output:
++        scores=AG_ATLAS,
++        missing=AG_ATLAS_MISSING,
++    params:
++        script="workflow/scripts/query_alphagenome_atlas.py",
++        scorers=','.join(_AG_ATLAS.get('scorers', ['AVI_SCORE', 'RNA_SEQ', 'SPLICE_SITES',
++                                                   'DNASE', 'CAGE', 'CHIP_HISTONE'])),
++        batch=_AG_ATLAS.get('batch_size', 200),
++        ontology=AG_ONTOLOGY,
++        key=AG_KEY_ARG,
++    shell:
++        """
++        python {params.script} variants {input.snv} {output.scores} \
++            --missing {output.missing} --scorers {params.scorers} \
++            --ontology-terms {params.ontology} --batch-size {params.batch} {params.key}
++        """
++
++
++rule alphagenome_model:
++    input:
++        # atlas backend: indels + SNVs missing from the Atlas; model backend: everything
++        variants=[AG_OTHER, AG_ATLAS_MISSING] if AG_BACKEND == 'atlas' else [AG_SNV, AG_OTHER]
++    output:
++        scores=AG_MODEL
++    params:
++        script="workflow/scripts/score_variants_alphagenome.py",
++        scorers=','.join(_AG_MODEL.get('scorers', [
++            'RNA_SEQ', 'SPLICE_SITES', 'SPLICE_SITE_USAGE', 'SPLICE_JUNCTIONS', 'DNASE', 'ATAC',
++            'CAGE', 'CHIP_HISTONE', 'CHIP_TF', 'POLYADENYLATION'])),
++        length=_AG_MODEL.get('sequence_length', '1MB'),
++        batch=_AG_MODEL.get('batch_size', 20),
++        all_genes="--all-genes" if _AG_MODEL.get('all_genes') else "",
++        ontology=AG_ONTOLOGY,
++        key=AG_KEY_ARG,
++    shell:
++        """
++        python {params.script} {output.scores} {input.variants} \
++            --scorers {params.scorers} --sequence-length {params.length} \
++            --batch-size {params.batch} --ontology-terms {params.ontology} \
++            {params.all_genes} {params.key}
++        """
+diff --git a/workflow/rules/alphagenome_ism.smk b/workflow/rules/alphagenome_ism.smk
+new file mode 100644
+index 0000000..06bea06
+--- /dev/null
++++ b/workflow/rules/alphagenome_ism.smk
+@@ -0,0 +1,133 @@
++# rules/alphagenome_ism.smk
++# DESIGN SKELETON: in silico mutagenesis (ISM) of the non-coding genome around the
++# 34 BRIDGES genes with the AlphaGenome Atlas, then Sei on the distal elements that
++# AlphaGenome predicts to affect the gene. See docs/ism_sei_design.md.
++#
++# Status:
++#   ism_regions, ism_atlas          runnable (Atlas interval queries, cached, per gene)
++#   ism_elements, ism_sei_*, report stubs: raise NotImplementedError when run
++#
++# Requires annotate_vep (for vep.report.genes / gtf). All keys are optional except where noted:
++#
++#   alphagenome_ism:
++#     outdir: results/ism
++#     genes: [BRCA1, BRCA2]         # default: vep.report.genes
++#     flank: 100000                 # bp each side of the MANE transcript
++#     around_tss: false             # true: window = TSS +/- flank instead
++#     chunk: 4000                   # bp per Atlas query (one cached parquet each)
++#     scorers: [AVI_SCORE, RNA_SEQ, SPLICE_SITES, DNASE, CAGE, CHIP_HISTONE]
++#     ontology_terms: [CL:0002327]
++#     elements:                     # ism_elements (to implement)
++#       score: "RNA_SEQ:CL:0002327 polyA plus RNA-seq"   # gene-level effect track
++#       min_quantile: 0.99          # Atlas calibrated quantile of |effect|
++#       exclude: [CDS]              # region classes to drop before calling elements
++#       merge_distance: 50          # bp between hit positions merged into one element
++#       min_positions: 3
++#     sei:
++#       top_snvs_per_element: 10    # strongest ISM SNVs per element sent to Sei VEP
++#       seqclass_annotation: ...    # hg38 Sei sequence-class BED (Zenodo 7113988)
++
++if 'VEP_REPORT' not in globals():
++    raise WorkflowError("alphagenome_ism needs the annotate_vep module (vep.report.genes/gtf)")
++
++ISM = config.get('alphagenome_ism') or {}
++ISM_DIR = ISM.get('outdir', 'results/ism')
++ISM_GENES = ISM.get('genes') or VEP_REPORT['genes']
++ISM_REGIONS = f"{ISM_DIR}/regions.tsv"
++_ISM_ELEM = ISM.get('elements') or {}
++_ISM_SEI = ISM.get('sei') or {}
++_ISM_KEY = (config.get('alphagenome') or {}).get('api_key_file')
++
++ALL_OUTPUTS.append(ISM_REGIONS)
++ALL_OUTPUTS.extend(expand(f"{ISM_DIR}/atlas/{{gene}}.parquet", gene=ISM_GENES))
++if ISM.get('run_design_steps'):   # stubs below; switch on once implemented
++    ALL_OUTPUTS.append(f"{ISM_DIR}/ism_sei_report.html")
++
++
++# 1. One window per gene around its MANE transcript.
++rule ism_regions:
++    output:
++        regions=ISM_REGIONS
++    params:
++        script="workflow/scripts/make_ism_regions.py",
++        gtf=VEP_REPORT['gtf'],
++        genes=','.join(ISM_GENES),
++        flank=ISM.get('flank', 100_000),
++        tss="--around-tss" if ISM.get('around_tss') else "",
++    shell:
++        """
++        python {params.script} {params.gtf} {output.regions} --genes {params.genes} \
++            --flank {params.flank} {params.tss}
++        """
++
++
++# 2. Every SNV in the window from the Atlas, effects on that gene (wide table).
++rule ism_atlas:
++    input:
++        regions=ISM_REGIONS
++    output:
++        scores=f"{ISM_DIR}/atlas/{{gene}}.parquet"
++    params:
++        script="workflow/scripts/query_alphagenome_atlas.py",
++        scorers=','.join(ISM.get('scorers', ['AVI_SCORE', 'RNA_SEQ', 'SPLICE_SITES', 'DNASE',
++                                            'CAGE', 'CHIP_HISTONE'])),
++        ontology=shlex.quote(','.join(ISM.get('ontology_terms', ['CL:0002327']))),
++        chunk=ISM.get('chunk', 4000),
++        cache=f"{ISM_DIR}/atlas/.cache",
++        key=f"--api-key-file {shlex.quote(_ISM_KEY)}" if _ISM_KEY else "",
++    shell:
++        """
++        python {params.script} interval {input.regions} {output.scores} --gene {wildcards.gene} \
++            --scorers {params.scorers} --ontology-terms {params.ontology} \
++            --chunk {params.chunk} --cache {params.cache} {params.key}
++        """
++
++
++# 3. (to implement) Call distal elements: per position the max-|effect| ALT on the gene's
++#    RNA_SEQ track; keep positions with quantile >= min_quantile outside excluded regions;
++#    merge hits within merge_distance; keep elements with >= min_positions.
++#    Output BED: chrom, start, end, gene, n_positions, max_effect, direction, tss_distance.
++rule ism_elements:
++    input:
++        scores=f"{ISM_DIR}/atlas/{{gene}}.parquet",
++        regions=ISM_REGIONS,
++    output:
++        bed=f"{ISM_DIR}/elements/{{gene}}.bed",
++        top_snvs=f"{ISM_DIR}/elements/{{gene}}_top_snvs.tsv",
++    run:
++        raise NotImplementedError("ism_elements: design only, see docs/ism_sei_design.md")
++
++
++# 4a. (to implement) What each element *is*: overlap with Sei's hg38 sequence-class
++#     annotation (Zenodo 7113988). No model run needed.
++rule ism_sei_annotate_elements:
++    input:
++        bed=f"{ISM_DIR}/elements/{{gene}}.bed"
++    output:
++        tsv=f"{ISM_DIR}/sei/{{gene}}_element_classes.tsv"
++    run:
++        raise NotImplementedError("ism_sei_annotate_elements: design only")
++
++
++# 4b. (to implement) What the strongest ISM mutations *do* to chromatin: the top SNVs per
++#     element through the same Sei steps as rules/sei.smk (prepare VCF -> sei_chromatin ->
++#     sei_seqclass -> merge), so AlphaGenome RNA effect and Sei class change can be compared.
++rule ism_sei_variants:
++    input:
++        snvs=f"{ISM_DIR}/elements/{{gene}}_top_snvs.tsv"
++    output:
++        tsv=f"{ISM_DIR}/sei/{{gene}}_top_snvs_sei.tsv"
++    run:
++        raise NotImplementedError("ism_sei_variants: design only")
++
++
++# 5. (to implement) Per gene: element map, AlphaGenome vs Sei concordance, and overlap
++#    with the observed BRIDGES variants from variant_effects.
++rule ism_sei_report:
++    input:
++        classes=expand(f"{ISM_DIR}/sei/{{gene}}_element_classes.tsv", gene=ISM_GENES),
++        snvs=expand(f"{ISM_DIR}/sei/{{gene}}_top_snvs_sei.tsv", gene=ISM_GENES),
++    output:
++        html=f"{ISM_DIR}/ism_sei_report.html"
++    run:
++        raise NotImplementedError("ism_sei_report: design only")
+diff --git a/workflow/rules/annotate_vep.smk b/workflow/rules/annotate_vep.smk
+index 581fd08..1fe1e23 100644
+--- a/workflow/rules/annotate_vep.smk
++++ b/workflow/rules/annotate_vep.smk
+@@ -14,17 +14,86 @@ VEP_COLUMN_ARGS = column_args(VEP_COLUMNS, 'vep.columns')
+ ALL_OUTPUTS.append(VARIANTS_VEP)
+ 
+ 
++# Optional effect-prediction annotations (all keys optional; omit a plugin to skip it).
++# Plugin data is not in the container: give paths under /storage, or add them to bind.
++#
++#   vep:
++#     sift: b                      # p = prediction, s = score, b = both
++#     polyphen: b
++#     bind: [/cluster/projects/...] # extra Singularity bind paths
++#     dir_plugins: /plugins        # only if VEP can't find the image's plugins
++#     plugins:
++#       dbNSFP:        {file: .../dbNSFP4.9a_grch38.gz,
++#                       fields: [REVEL_score, MetaRNN_score, AlphaMissense_score, AlphaMissense_pred]}
++#       AlphaMissense: {file: .../AlphaMissense_hg38.tsv.gz}
++#       REVEL:         {file: .../new_tabbed_revel_grch38.tsv.gz}
++#       dbscSNV:       {file: .../dbscSNV1.1_GRCh38.txt.gz}
++#       MaxEntScan:    {dir: .../fordownload}
++#       SpliceAI:      {snv: .../spliceai_scores.raw.snv.hg38.vcf.gz,
++#                       indel: .../spliceai_scores.raw.indel.hg38.vcf.gz}
++#     extra_plugins: []            # raw '--plugin' specs, passed through unchanged
++_DBNSFP_DEFAULT_FIELDS = ['REVEL_score', 'MetaRNN_score', 'AlphaMissense_score', 'AlphaMissense_pred']
++
++
++def vep_plugin_specs(vep):
++    """(specs, data_files): VEP --plugin specs and the data paths they need."""
++    plugins = vep.get('plugins') or {}
++    known = {'dbNSFP', 'AlphaMissense', 'REVEL', 'dbscSNV', 'MaxEntScan', 'SpliceAI'}
++    unknown = set(plugins) - known
++    if unknown:
++        raise ValueError(f"vep.plugins: unknown plugin(s) {sorted(unknown)}; "
++                         f"allowed: {sorted(known)} (use vep.extra_plugins for others)")
++    specs, files = [], []
++    for name, opts in plugins.items():
++        opts = opts or {}
++        if name == 'dbNSFP':
++            fields = opts.get('fields', _DBNSFP_DEFAULT_FIELDS)
++            specs.append(','.join(['dbNSFP', opts['file'], *fields]))
++            files.append(opts['file'])
++        elif name in ('AlphaMissense', 'REVEL'):
++            specs.append(f"{name},file={opts['file']}")
++            files.append(opts['file'])
++        elif name == 'dbscSNV':
++            specs.append(f"dbscSNV,{opts['file']}")
++            files.append(opts['file'])
++        elif name == 'MaxEntScan':
++            specs.append(f"MaxEntScan,{opts['dir']}")
++            files.append(opts['dir'])
++        elif name == 'SpliceAI':
++            parts = [f"{k}={opts[k]}" for k in ('snv', 'indel') if opts.get(k)]
++            if not parts:
++                raise ValueError("vep.plugins.SpliceAI needs at least one of snv/indel")
++            specs.append(','.join(['SpliceAI', *parts]))
++            files.extend(opts[k] for k in ('snv', 'indel') if opts.get(k))
++    specs.extend(vep.get('extra_plugins') or [])
++    return specs, files
++
++
++VEP_PLUGIN_SPECS, VEP_PLUGIN_FILES = vep_plugin_specs(VEP)
++_vep_extra = []
++for _key in ('sift', 'polyphen'):
++    if VEP.get(_key):
++        _vep_extra.append(f"--{_key} {VEP[_key]}")
++if VEP.get('dir_plugins'):
++    _vep_extra.append(f"--dir-plugins {shlex.quote(str(VEP['dir_plugins']))}")
++_vep_extra += [f"--bind {shlex.quote(str(b))}" for b in VEP.get('bind') or []]
++_vep_extra += [f"--plugin {shlex.quote(s)}" for s in VEP_PLUGIN_SPECS]
++VEP_EXTRA_ARGS = " ".join(_vep_extra)
++
++
+ rule annotate_vep:
+     input:
+-        var=VARIANTS_HG38
++        var=VARIANTS_HG38,
++        plugin_data=VEP_PLUGIN_FILES,   # fail early if plugin data is missing
+     output:
+         vcf=VARIANTS_VEP
+     params:
+         script="workflow/scripts/annotate_vep.py",
+         columns=VEP_COLUMN_ARGS,
++        extra=VEP_EXTRA_ARGS,
+     shell:
+         """
+-        python {params.script} {input.var} {output.vcf} {params.columns}
++        python {params.script} {input.var} {output.vcf} {params.columns} {params.extra}
+         """
+ 
+ 
+diff --git a/workflow/rules/sei.smk b/workflow/rules/sei.smk
+new file mode 100644
+index 0000000..f127278
+--- /dev/null
++++ b/workflow/rules/sei.smk
+@@ -0,0 +1,120 @@
++# rules/sei.smk
++# Sei (Troyanskaya lab) sequence-class variant effects for the variants in
++# variant_effects, joined back onto that table. Requires the variant_effects module.
++#
++# One-off setup (see README, "Sei"):
++#   git clone https://github.com/FunctionLab/sei-framework && cd sei-framework
++#   sh ./download_data.sh            # model + hg19/hg38 FASTA, several GB
++#   a Python env with torch, selene-sdk, docopt (plus h5py, pandas)
++#
++#   sei:
++#     dir: /storage/.../sei-framework     # required: the cloned, set-up framework
++#     run_prefix: conda run --no-capture-output -n sei   # how to run its Python; "" if active
++#     outdir: results/<vep stem>_sei
++#     include: noncoding                  # or: all
++#     snv_only: false
++#     cuda: false                         # true on a GPU node (step 1 is slow on CPU)
++#     resources: {}                       # passed to the executor for step 1, e.g.
++#                                         #   {slurm_partition: accel, gpus: 1, runtime: 240}
++
++if 'VARIANT_EFFECTS' not in globals():
++    raise WorkflowError("sei needs the variant_effects module; add it to 'modules'")
++
++SEI = config.get('sei') or {}
++if not SEI.get('dir'):
++    raise WorkflowError("sei.dir must point to a set-up sei-framework checkout")
++SEI_FRAMEWORK = os.path.abspath(SEI['dir'])
++SEI_PREFIX = SEI.get('run_prefix', '')
++SEI_OUT = SEI.get('outdir', f"{os.path.splitext(VARIANTS_VEP)[0]}_sei")
++SEI_RESOURCES = SEI.get('resources') or {}
++
++SEI_VCF = f"{SEI_OUT}/sei_input.vcf"
++_SEI_H5 = f"{SEI_OUT}/chromatin-profiles-hdf5"
++SEI_REF = f"{_SEI_H5}/sei_input.ref_predictions.h5"
++SEI_ALT = f"{_SEI_H5}/sei_input.alt_predictions.h5"
++SEI_LABELS = f"{_SEI_H5}/sei_input_row_labels.txt"
++SEI_NPY = f"{SEI_OUT}/sei_input.sequence_class_scores.npy"
++SEI_MERGED = f"{SEI_OUT}/variant_effects_sei.tsv"
++SEI_LONG = f"{SEI_OUT}/sei_sequence_class_scores_long.tsv"
++
++ALL_OUTPUTS.extend([SEI_MERGED, SEI_LONG])
++
++
++rule sei_vcf:
++    input:
++        effects=VARIANT_EFFECTS
++    output:
++        vcf=SEI_VCF
++    params:
++        script="workflow/scripts/prepare_sei_vcf.py",
++        include=SEI.get('include', 'noncoding'),
++        snv_only="--snv-only" if SEI.get('snv_only') else "",
++    shell:
++        """
++        python {params.script} {input.effects} {output.vcf} \
++            --include {params.include} {params.snv_only}
++        """
++
++
++# Step 1: 21,907 chromatin-profile predictions for ref and alt (the slow, GPU step).
++# The Sei scripts use paths relative to the framework dir, so they are run from there.
++rule sei_chromatin:
++    input:
++        vcf=SEI_VCF
++    output:
++        ref=SEI_REF,
++        alt=SEI_ALT,
++        labels=SEI_LABELS,
++    params:
++        framework=SEI_FRAMEWORK,
++        prefix=SEI_PREFIX,
++        vcf=lambda wc, input: os.path.abspath(input.vcf),
++        outdir=os.path.abspath(SEI_OUT),
++        cuda="--cuda" if SEI.get('cuda') else "",
++    resources:
++        **SEI_RESOURCES
++    shell:
++        """
++        cd {params.framework}
++        {params.prefix} sh 1_variant_effect_prediction.sh {params.vcf} hg38 {params.outdir} {params.cuda}
++        """
++
++
++# Step 2: sequence-class scores (alt - ref, histone-normalised); fast, CPU is fine.
++# --no-tsv skips Sei's sorted 21,907-column TSVs; merge_sei_scores.py reads the .npy.
++rule sei_seqclass:
++    input:
++        ref=SEI_REF,
++        alt=SEI_ALT,
++        labels=SEI_LABELS,
++    output:
++        npy=SEI_NPY
++    params:
++        framework=SEI_FRAMEWORK,
++        prefix=SEI_PREFIX,
++        ref=lambda wc, input: os.path.abspath(input.ref),
++        alt=lambda wc, input: os.path.abspath(input.alt),
++        outdir=os.path.abspath(SEI_OUT),
++    shell:
++        """
++        cd {params.framework}
++        {params.prefix} sh 2_varianteffect_sc_score.sh {params.ref} {params.alt} {params.outdir} --no-tsv
++        """
++
++
++rule sei_merge:
++    input:
++        npy=SEI_NPY,
++        labels=SEI_LABELS,
++        effects=VARIANT_EFFECTS,
++    output:
++        merged=SEI_MERGED,
++        long=SEI_LONG,
++    params:
++        script="workflow/scripts/merge_sei_scores.py",
++        seqclass=f"{SEI_FRAMEWORK}/model/seqclass.names",
++    shell:
++        """
++        python {params.script} {input.npy} {input.labels} {params.seqclass} \
++            {input.effects} {output.merged} --long {output.long}
++        """
+diff --git a/workflow/rules/variant_effects.smk b/workflow/rules/variant_effects.smk
+new file mode 100644
+index 0000000..66048c3
+--- /dev/null
++++ b/workflow/rules/variant_effects.smk
+@@ -0,0 +1,58 @@
++# rules/variant_effects.smk
++# Applies the variant-effect criteria from Denise's paper (LoF, damaging missense,
++# splicing, optional ExPectoSC expression) to the annotate_vep output.
++# Requires the annotate_vep module. All keys are optional:
++#
++#   variant_effects:
++#     output: results/<vep stem>_effects.tsv
++#     summary: results/<vep stem>_effects_summary.tsv
++#     thresholds:                     # defaults = Denise's table
++#       polyphen_min: 0.85
++#       revel_min: 0.6
++#       metarnn_min: 0.8
++#       dbscsnv_min: 0.9              # both ada and rf
++#       maxentscan_abs_min: 2
++#       spliceai_min: 0.5
++#       expectosc_abs_z: 1
++#       missense_min_tools: 1         # tools that must agree for damaging_missense
++#       splice_min_tools: 1
++#     expectosc:                      # optional: z-scores from an ExPectoSC run
++#       table: .../ExpectoSC_bridges__breast.csv
++#       id_col: SNP                   # must match the VEP VCF IDs (= input VariantID)
++#       celltypes: []                 # empty = all numeric columns
++import json
++
++if 'VARIANTS_VEP' not in globals():
++    raise WorkflowError("variant_effects needs the annotate_vep module; add it to 'modules'")
++
++EFFECTS = config.get('variant_effects') or {}
++_vep_root = os.path.splitext(VARIANTS_VEP)[0]
++VARIANT_EFFECTS = EFFECTS.get('output', f"{_vep_root}_effects.tsv")
++VARIANT_EFFECTS_SUMMARY = EFFECTS.get('summary', f"{_vep_root}_effects_summary.tsv")
++_EXPECTOSC = EFFECTS.get('expectosc') or {}
++
++ALL_OUTPUTS.extend([VARIANT_EFFECTS, VARIANT_EFFECTS_SUMMARY])
++
++
++rule classify_variant_effects:
++    input:
++        vcf=VARIANTS_VEP,
++        regions=VEP_ANNOTATED,
++        expectosc=[_EXPECTOSC['table']] if _EXPECTOSC.get('table') else [],
++    output:
++        tsv=VARIANT_EFFECTS,
++        summary=VARIANT_EFFECTS_SUMMARY,
++    params:
++        script="workflow/scripts/classify_variant_effects.py",
++        genes=','.join(VEP_REPORT['genes']),
++        thresholds=shlex.quote(json.dumps(EFFECTS.get('thresholds') or {})),
++        expectosc=(f"--expectosc {shlex.quote(_EXPECTOSC['table'])} "
++                   f"--expectosc-id-col {shlex.quote(_EXPECTOSC.get('id_col', 'SNP'))} "
++                   + (f"--expectosc-celltypes {shlex.quote(','.join(_EXPECTOSC['celltypes']))}"
++                      if _EXPECTOSC.get('celltypes') else "")) if _EXPECTOSC.get('table') else "",
++    shell:
++        """
++        python {params.script} {input.vcf} {output.tsv} --genes {params.genes} \
++            --regions {input.regions} --thresholds {params.thresholds} \
++            {params.expectosc} --summary {output.summary}
++        """
+diff --git a/workflow/scripts/alphagenome_utils.py b/workflow/scripts/alphagenome_utils.py
+new file mode 100644
+index 0000000..03ee0b6
+--- /dev/null
++++ b/workflow/scripts/alphagenome_utils.py
+@@ -0,0 +1,66 @@
++"""Shared helpers for the AlphaGenome scripts (API key, variant tables, retries).
++
++The API key is never stored in the repository. It is read, in order, from
++``--api-key-file`` (if given), the ``ALPHAGENOME_API_KEY`` environment variable,
++or ``<project root>/resources/API_KEY`` (git-ignored, as in the notebooks).
++"""
++
++import os
++import sys
++import time
++from pathlib import Path
++
++import pandas as pd
++
++DEFAULT_KEY_FILE = Path('resources/API_KEY')
++VARIANT_COLUMNS = ['variant_id', 'CHROM', 'POS', 'REF', 'ALT']
++
++
++def load_api_key(key_file=None):
++    if key_file:
++        return Path(key_file).read_text().strip()
++    if os.environ.get('ALPHAGENOME_API_KEY'):
++        return os.environ['ALPHAGENOME_API_KEY'].strip()
++    if DEFAULT_KEY_FILE.exists():
++        return DEFAULT_KEY_FILE.read_text().strip()
++    sys.exit("No AlphaGenome API key: set ALPHAGENOME_API_KEY, pass --api-key-file, "
++             f"or put it in {DEFAULT_KEY_FILE} (git-ignored)")
++
++
++def read_variants(paths):
++    """Concatenate variant TSVs (variant_id, CHROM, POS, REF, ALT [, gene]); skips empty files."""
++    frames = []
++    for path in paths:
++        df = pd.read_csv(path, sep='\t', dtype={'CHROM': str})
++        missing = [c for c in VARIANT_COLUMNS if c not in df]
++        if missing:
++            raise ValueError(f"{path} is missing column(s) {missing}")
++        frames.append(df)
++    df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=VARIANT_COLUMNS)
++    df['CHROM'] = 'chr' + df.CHROM.astype(str).str.removeprefix('chr')
++    df['POS'] = df.POS.astype(int)
++    return df.drop_duplicates('variant_id').reset_index(drop=True)
++
++
++def with_retries(fn, what, attempts=5, wait=10):
++    """Call ``fn()``; retry transient (gRPC/network) errors with linear back-off.
++
++    ValueError (bad request / not found) and PermissionError (bad API key) are
++    raised at once: retrying cannot fix them.
++    """
++    for attempt in range(1, attempts + 1):
++        try:
++            return fn()
++        except (ValueError, PermissionError):
++            raise
++        except Exception as e:  # noqa: BLE001 - the client raises assorted gRPC errors
++            if attempt == attempts:
++                raise RuntimeError(f"{what} failed after {attempts} attempts") from e
++            print(f"retry {attempt}/{attempts} {what}: {type(e).__name__}: {str(e)[:200]}",
++                  file=sys.stderr)
++            time.sleep(wait * attempt)
++
++
++def chunks(df, size):
++    for start in range(0, len(df), size):
++        yield start // size, df.iloc[start:start + size]
+diff --git a/workflow/scripts/annotate_vep.py b/workflow/scripts/annotate_vep.py
+index 8138109..74557e7 100644
+--- a/workflow/scripts/annotate_vep.py
++++ b/workflow/scripts/annotate_vep.py
+@@ -59,6 +59,28 @@ VEP is run with::
+ * ``ID`` is set to ``VariantID`` (``.`` if missing); QUAL, FILTER and INFO
+   are ``.``.
+  
++Plugins (optional)
++------------------
++``--sift``/``--polyphen`` read predictions from the cache. ``--plugin SPEC``
++(repeatable) is passed to VEP unchanged; the plugin *code* ships with the
++ensembl-vep image, but plugin *data* does not and must be on a bound path.
++The ``annotate_vep`` rule builds these from ``vep.plugins`` in the config;
++the CSQ fields they add are read by classify_variant_effects.py:
++
++=============  ===========================================  =======================
++Plugin         Spec                                         CSQ fields
++=============  ===========================================  =======================
++dbNSFP         ``dbNSFP,<file>,REVEL_score,MetaRNN_score,``  same as the field list
++               ``AlphaMissense_score,AlphaMissense_pred``
++AlphaMissense  ``AlphaMissense,file=<tsv.gz>``              am_class,
++                                                            am_pathogenicity
++REVEL          ``REVEL,file=<tsv.gz>``                      REVEL
++dbscSNV        ``dbscSNV,<file>``                           ada_score, rf_score
++MaxEntScan     ``MaxEntScan,<fordownload dir>``             MaxEntScan_ref/alt/diff
++SpliceAI       ``SpliceAI,snv=<vcf.gz>,indel=<vcf.gz>``     SpliceAI_pred_DS_AG/AL/
++                                                            DG/DL
++=============  ===========================================  =======================
++
+ Containers and paths
+ --------------------
+ The container is run with ``-B /storage``. Input, output, image and cache
+@@ -129,6 +151,20 @@ def parse_args(argv=None):
+     parser.add_argument("--ref-col",   default="Ref",        help="Ref allele column (default: %(default)s)")
+     parser.add_argument("--alt-col",   default="Alt",        help="Alt allele column (default: %(default)s)")
+ 
++    # Optional effect-prediction annotations (see "Plugins" in the module docstring)
++    parser.add_argument("--sift", choices=["p", "s", "b"], default=None,
++                        help="Add SIFT from the cache: p=prediction, s=score, b=both")
++    parser.add_argument("--polyphen", choices=["p", "s", "b"], default=None,
++                        help="Add PolyPhen from the cache: p=prediction, s=score, b=both")
++    parser.add_argument("--plugin", action="append", default=[], metavar="SPEC",
++                        help="VEP plugin spec, passed as --plugin SPEC (repeatable), "
++                             "e.g. 'dbscSNV,/storage/.../dbscSNV1.1_GRCh38.txt.gz'")
++    parser.add_argument("--dir-plugins", type=Path, default=None,
++                        help="Plugin code directory inside the container (default: VEP's own)")
++    parser.add_argument("--bind", action="append", default=[], metavar="PATH",
++                        help="Extra Singularity bind path, e.g. for plugin data outside /storage "
++                             "(repeatable)")
++
+     args = parser.parse_args(argv)
+ 
+     # Fill path defaults from root
+@@ -189,18 +225,35 @@ def write_vcf(variants, vcf_path):
+             f.write(f"{v.chrom}\t{v.Position}\t{vid}\t{v.Ref}\t{v.Alt}\t.\t.\t.\n")
+ 
+             
+-def annotate_vep(vcf_in, vep_out, vep_img, vep_cache):
++def vep_extra_args(sift=None, polyphen=None, plugins=(), dir_plugins=None):
++    """VEP arguments for the optional SIFT/PolyPhen and plugin annotations."""
++    extra = []
++    if sift:
++        extra += ['--sift', sift]
++    if polyphen:
++        extra += ['--polyphen', polyphen]
++    if dir_plugins:
++        extra += ['--dir_plugins', str(dir_plugins)]
++    for spec in plugins:
++        extra += ['--plugin', spec]
++    return extra
++
++
++def annotate_vep(vcf_in, vep_out, vep_img, vep_cache, extra_args=(), binds=()):
+     """Run VEP in Singularity on ``vcf_in`` and write ``vep_out``.
+- 
++
+     Raises
+     ------
+     subprocess.CalledProcessError
+         If VEP exits with a non-zero status.
+     """
+-    subprocess.run([
+-        'singularity', 'exec', '-B', '/storage', str(vep_img), 'vep',
+-        '--input_file', str(vcf_in), 
+-        '--format', 'vcf', 
++    bind_args = []
++    for path in ['/storage', *binds]:
++        bind_args += ['-B', str(path)]
++    cmd = [
++        'singularity', 'exec', *bind_args, str(vep_img), 'vep',
++        '--input_file', str(vcf_in),
++        '--format', 'vcf',
+         '--output_file', str(vep_out),
+         '--vcf',
+         '--cache', '--offline', '--refseq', '--use_given_ref',
+@@ -208,7 +261,10 @@ def annotate_vep(vcf_in, vep_out, vep_img, vep_cache):
+         '--assembly', 'GRCh38',
+         '--mane',
+         '--force_overwrite',
+-    ], check=True)
++        *extra_args,
++    ]
++    print('Running:', ' '.join(cmd), file=sys.stderr)
++    subprocess.run(cmd, check=True)
+ 
+ 
+ def main(argv=None):
+@@ -235,7 +291,8 @@ def main(argv=None):
+     args.vep_out.parent.mkdir(parents=True, exist_ok=True)
+     vcf_in = args.vep_out.with_suffix(".input.vcf")
+     write_vcf(variants, vcf_in)
+-    annotate_vep(vcf_in, args.vep_out, args.vep_img, args.vep_cache)
++    extra = vep_extra_args(args.sift, args.polyphen, args.plugin, args.dir_plugins)
++    annotate_vep(vcf_in, args.vep_out, args.vep_img, args.vep_cache, extra, args.bind)
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/workflow/scripts/classify_variant_effects.py b/workflow/scripts/classify_variant_effects.py
+new file mode 100644
+index 0000000..2898528
+--- /dev/null
++++ b/workflow/scripts/classify_variant_effects.py
+@@ -0,0 +1,375 @@
++#!/usr/bin/env python3
++"""
++classify_variant_effects.py
++===========================
++
++Apply the variant-effect criteria from Denise's paper to a VEP-annotated VCF,
++one row per variant.
++
++Input
++-----
++``VEP_VCF``
++    Output of annotate_vep.py (``--mane``), ideally run with the SIFT/PolyPhen
++    options and the plugins in ``vep.plugins`` (see annotate_vep.py). Tools whose
++    CSQ fields are absent are reported as missing and their flags left empty
++    (NA), so the script also runs on a VCF annotated without plugins.
++
++Method
++------
++1. One CSQ entry per variant: the MANE Select entry of a target gene (nearest
++   if several), else any MANE Select entry, else the first entry. Variants
++   without a target-gene MANE entry get region "distal (>5 kb)", as in
++   vep_report.py.
++2. Per-tool flags, thresholds from the config (defaults = Denise's table):
++
++   ==================  =====================================  ==================
++   Question            Tool (CSQ field)                       Default threshold
++   ==================  =====================================  ==================
++   Loss of function    Consequence                            LoF term present
++   Damaging missense   SIFT                                   deleterious
++                       PolyPhen (score)                       >= 0.85
++                       AlphaMissense (am_class or dbNSFP      likely pathogenic
++                       AlphaMissense_pred)
++                       REVEL (REVEL_score or REVEL)           >= 0.6
++                       MetaRNN (MetaRNN_score)                >= 0.8
++   Splicing disrupted  dbscSNV (ada_score, rf_score)          both >= 0.9
++                       MaxEntScan (MaxEntScan_diff)           abs >= 2
++                       SpliceAI (max SpliceAI_pred_DS_*)      >= 0.5
++   Expression altered  ExPectoSC z-scores (optional table)    abs z > 1
++   ==================  =====================================  ==================
++
++   Multi-valued fields (``a&b``) use the maximum score / any matching class.
++3. Group flags: ``damaging_missense`` needs >= ``missense_min_tools`` tools and
++   (by default) a missense consequence; ``splice_disrupted`` needs
++   >= ``splice_min_tools`` tools. ``coding`` is True for any coding consequence
++   (vep_report.CODING_TERMS) on the chosen entry.
++
++Output
++------
++``OUT_TSV``   one row per variant: position, gene (target gene; with ``--regions``
++              the nearest target gene also for distal variants), transcript, consequence,
++              region, coding, raw tool values, per-tool and group flags,
++              ``evidence`` (semicolon list of the flags that are True).
++``--summary`` optional TSV: per gene, number of variants per group flag.
++
++Usage
++-----
++::
++
++    python classify_variant_effects.py VEP_VCF OUT_TSV --genes G1,G2,...
++        [--thresholds JSON] [--expectosc CSV --expectosc-id-col SNP]
++        [--summary TSV]
++
++Author: Eirik Høye
++"""
++
++import argparse
++import json
++import re
++import sys
++from pathlib import Path
++
++import numpy as np
++import pandas as pd
++
++sys.path.insert(0, str(Path(__file__).resolve().parent))
++from vep_report import CODING_TERMS, region_class  # noqa: E402  (same CSQ conventions)
++
++DEFAULTS = {
++    'lof_consequences': ['transcript_ablation', 'splice_acceptor_variant',
++                         'splice_donor_variant', 'stop_gained', 'frameshift_variant',
++                         'start_lost'],
++    'sift_classes': ['deleterious'],
++    'polyphen_min': 0.85,
++    'alphamissense_classes': ['likely_pathogenic'],
++    'revel_min': 0.6,
++    'metarnn_min': 0.8,
++    'dbscsnv_min': 0.9,
++    'maxentscan_abs_min': 2.0,
++    'spliceai_min': 0.5,
++    'expectosc_abs_z': 1.0,
++    'missense_min_tools': 1,
++    'missense_require_consequence': True,
++    'splice_min_tools': 1,
++}
++MISSENSE_TOOLS = ['sift', 'polyphen', 'alphamissense', 'revel', 'metarnn']
++SPLICE_TOOLS = ['dbscsnv', 'maxentscan', 'spliceai']
++SPLICEAI_FIELDS = ['SpliceAI_pred_DS_AG', 'SpliceAI_pred_DS_AL',
++                   'SpliceAI_pred_DS_DG', 'SpliceAI_pred_DS_DL']
++AM_DBNSFP_CODES = {'P': 'likely_pathogenic', 'B': 'likely_benign', 'A': 'ambiguous'}
++
++
++def parse_args(argv=None):
++    p = argparse.ArgumentParser(description=__doc__.split('\n\n')[1],
++                                formatter_class=argparse.RawDescriptionHelpFormatter)
++    p.add_argument('vep_vcf')
++    p.add_argument('out_tsv', type=Path)
++    p.add_argument('--genes', required=True, help='Comma-separated target genes (HGNC symbols)')
++    p.add_argument('--thresholds', default='{}',
++                   help='JSON object overriding default thresholds (keys as in DEFAULTS)')
++    p.add_argument('--expectosc', default=None,
++                   help='Optional ExPectoSC z-score table: one row per variant, one column per cell type')
++    p.add_argument('--expectosc-id-col', default='SNP')
++    p.add_argument('--expectosc-celltypes', default=None,
++                   help='Comma-separated cell-type columns to use (default: all numeric columns)')
++    p.add_argument('--regions', default=None,
++                   help="vep_report.py --annotated CSV; its gene (nearest target gene for distal "
++                        "variants), region and tss_distance replace the CSQ-based ones")
++    p.add_argument('--summary', type=Path, default=None)
++    return p.parse_args(argv)
++
++
++# --------------------------------------------------------------------------------------
++# Reading
++# --------------------------------------------------------------------------------------
++def read_vep_vcf(path):
++    """Return (records, csq_fields, csq): records = one row per VCF record,
++    csq = one row per CSQ entry, keyed by record index."""
++    fields, records, entries = None, [], []
++    with open(path) as fh:
++        for line in fh:
++            if line.startswith('##INFO=<ID=CSQ'):
++                fields = line.split('Format: ')[1].split('"')[0].split('|')
++                continue
++            if line.startswith('#'):
++                continue
++            if fields is None:
++                raise ValueError(f"{path} has no CSQ header line; is it a VEP VCF?")
++            chrom, pos, vid, ref, alt, _, _, info = line.rstrip('\n').split('\t')[:8]
++            idx = len(records)
++            records.append((vid, chrom, int(pos), ref, alt))
++            csq = next((x[4:] for x in info.split(';') if x.startswith('CSQ=')), '')
++            for entry in csq.split(',') if csq else []:
++                values = entry.split('|')
++                if len(values) == len(fields):
++                    entries.append([idx] + values)
++    records = pd.DataFrame(records, columns=['VariantID', 'chrom', 'pos', 'ref', 'alt'])
++    csq = pd.DataFrame(entries, columns=['_rec'] + fields)
++    return records, fields, csq
++
++
++def pick_entries(csq, genes):
++    """One CSQ entry per record: target-gene MANE (nearest) > any MANE > first."""
++    csq = csq.copy()
++    mane = csq.get('MANE_SELECT', pd.Series('', index=csq.index)).fillna('') != ''
++    target = csq.SYMBOL.isin(genes) & mane
++    csq['_rank'] = np.select([target, mane], [0, 1], 2)
++    csq['_dist'] = pd.to_numeric(csq.get('DISTANCE', pd.Series('', index=csq.index))
++                                 .replace('', '0'), errors='coerce').fillna(0)
++    csq['_order'] = np.arange(len(csq))
++    csq = csq.sort_values(['_rec', '_rank', '_dist', '_order'])
++    return csq.drop_duplicates('_rec').set_index('_rec')
++
++
++# --------------------------------------------------------------------------------------
++# Value parsing
++# --------------------------------------------------------------------------------------
++_NUM = re.compile(r'-?\d+(?:\.\d+)?(?:[eE]-?\d+)?')
++
++
++def max_number(value):
++    """Largest number in a CSQ value such as '0.3&0.7', 'probably_damaging(0.99)', '.'."""
++    if value is None or (isinstance(value, float) and np.isnan(value)):
++        return np.nan
++    nums = [float(x) for part in str(value).split('&')
++            for x in _NUM.findall(part.split('(')[-1] if '(' in part else part)]
++    return max(nums) if nums else np.nan
++
++
++def max_abs_number(value):
++    if value is None or (isinstance(value, float) and np.isnan(value)):
++        return np.nan
++    nums = [float(x) for part in str(value).split('&') for x in _NUM.findall(part)]
++    return max(nums, key=abs) if nums else np.nan
++
++
++def classes(value):
++    """Set of class labels in e.g. 'deleterious(0.01)&tolerated(0.4)'."""
++    if not isinstance(value, str) or value in ('', '.', '-'):
++        return set()
++    return {part.split('(')[0].strip() for part in value.split('&') if part not in ('', '.', '-')}
++
++
++def col(df, name):
++    return df[name] if name in df.columns else pd.Series(np.nan, index=df.index, dtype=object)
++
++
++def _na_flags(df):
++    return pd.Series(pd.NA, index=df.index, dtype='boolean')
++
++
++def flag(values, condition):
++    """Nullable boolean: NA where the tool has no value."""
++    out = pd.Series(pd.NA, index=values.index, dtype='boolean')
++    has = values.notna()
++    out[has] = condition[has].astype(bool)
++    return out
++
++
++# --------------------------------------------------------------------------------------
++# Classification
++# --------------------------------------------------------------------------------------
++def classify(records, picked, genes, th):
++    df = records.join(picked, how='left')
++    out = records.copy()
++    ref_len, alt_len = df.ref.str.len(), df.alt.str.len()
++    out['variant_type'] = np.select([(ref_len == 1) & (alt_len == 1), ref_len > alt_len,
++                                     ref_len < alt_len], ['SNV', 'deletion', 'insertion'],
++                                    'MNV / complex')
++    out['gene'] = col(df, 'SYMBOL')
++    out['transcript'] = col(df, 'Feature')
++    out['mane_select'] = col(df, 'MANE_SELECT')
++    out['consequence'] = col(df, 'Consequence').fillna('')
++    out['impact'] = col(df, 'IMPACT')
++
++    in_target = (df.SYMBOL.isin(genes) & (col(df, 'MANE_SELECT').fillna('') != '')).fillna(False)
++    out['region'] = [region_class(c, d or '0')[0] if t else 'distal (>5 kb)'
++                     for c, d, t in zip(out.consequence, col(df, 'DISTANCE').fillna('0'), in_target)]
++    terms = out.consequence.str.split('&').apply(set)
++    out['coding'] = terms.apply(lambda t: bool(t & set(CODING_TERMS)))
++    out['missense'] = terms.apply(lambda t: 'missense_variant' in t)
++
++    available = []
++
++    # Loss of function
++    lof = set(th['lof_consequences'])
++    out['lof'] = terms.apply(lambda t: bool(t & lof)).astype('boolean')
++
++    # Damaging missense
++    if 'SIFT' in df:
++        available.append('sift')
++        out['sift'] = col(df, 'SIFT').replace({'': np.nan})
++        out['sift_flag'] = flag(out.sift, out.sift.apply(classes)
++                                .apply(lambda c: bool(c & set(th['sift_classes']))))
++    if 'PolyPhen' in df:
++        available.append('polyphen')
++        out['polyphen'] = col(df, 'PolyPhen').apply(max_number)
++        out['polyphen_flag'] = flag(out.polyphen, out.polyphen >= th['polyphen_min'])
++    if 'am_class' in df or 'AlphaMissense_pred' in df:
++        available.append('alphamissense')
++        if 'am_class' in df:
++            am_cls = col(df, 'am_class').apply(classes)
++            out['alphamissense'] = col(df, 'am_pathogenicity').apply(max_number)
++        else:
++            am_cls = col(df, 'AlphaMissense_pred').apply(classes).apply(
++                lambda c: {AM_DBNSFP_CODES.get(x, x) for x in c})
++            out['alphamissense'] = col(df, 'AlphaMissense_score').apply(max_number)
++        out['alphamissense_class'] = am_cls.apply(lambda c: '&'.join(sorted(c)) or np.nan)
++        out['alphamissense_flag'] = flag(out.alphamissense_class, am_cls.apply(
++            lambda c: bool(c & set(th['alphamissense_classes']))))
++    revel_field = 'REVEL_score' if 'REVEL_score' in df else ('REVEL' if 'REVEL' in df else None)
++    if revel_field:
++        available.append('revel')
++        out['revel'] = col(df, revel_field).apply(max_number)
++        out['revel_flag'] = flag(out.revel, out.revel >= th['revel_min'])
++    if 'MetaRNN_score' in df:
++        available.append('metarnn')
++        out['metarnn'] = col(df, 'MetaRNN_score').apply(max_number)
++        out['metarnn_flag'] = flag(out.metarnn, out.metarnn >= th['metarnn_min'])
++
++    # Splicing
++    if 'ada_score' in df and 'rf_score' in df:
++        available.append('dbscsnv')
++        out['dbscsnv_ada'] = col(df, 'ada_score').apply(max_number)
++        out['dbscsnv_rf'] = col(df, 'rf_score').apply(max_number)
++        both = out.dbscsnv_ada.notna() & out.dbscsnv_rf.notna()
++        out['dbscsnv_flag'] = flag(out.dbscsnv_ada.where(both),
++                                   (out.dbscsnv_ada >= th['dbscsnv_min'])
++                                   & (out.dbscsnv_rf >= th['dbscsnv_min']))
++    if 'MaxEntScan_diff' in df:
++        available.append('maxentscan')
++        out['maxentscan_diff'] = col(df, 'MaxEntScan_diff').apply(max_abs_number)
++        out['maxentscan_flag'] = flag(out.maxentscan_diff,
++                                      out.maxentscan_diff.abs() >= th['maxentscan_abs_min'])
++    if any(f in df for f in SPLICEAI_FIELDS):
++        available.append('spliceai')
++        ds = pd.concat([col(df, f).apply(max_number) for f in SPLICEAI_FIELDS], axis=1)
++        out['spliceai_max_ds'] = ds.max(axis=1)
++        out['spliceai_flag'] = flag(out.spliceai_max_ds, out.spliceai_max_ds >= th['spliceai_min'])
++
++    # Group flags
++    def n_true(tools):
++        cols = [f'{t}_flag' for t in tools if f'{t}_flag' in out]
++        if not cols:
++            return pd.Series(pd.NA, index=out.index, dtype='Int64'), cols
++        return out[cols].fillna(False).astype(int).sum(axis=1).astype('Int64'), cols
++
++    out['n_missense_tools'], miss_cols = n_true(MISSENSE_TOOLS)
++    dm = out.n_missense_tools >= th['missense_min_tools']
++    if th['missense_require_consequence']:
++        dm = dm & out.missense
++    out['damaging_missense'] = dm.astype('boolean') if miss_cols else _na_flags(out)
++    out['n_splice_tools'], splice_cols = n_true(SPLICE_TOOLS)
++    out['splice_disrupted'] = ((out.n_splice_tools >= th['splice_min_tools']).astype('boolean')
++                               if splice_cols else _na_flags(out))
++    return out, available
++
++
++def add_expectosc(out, path, id_col, celltypes, abs_z):
++    z = pd.read_csv(path, sep=None, engine='python')
++    if id_col not in z:
++        raise ValueError(f"{path} has no column {id_col!r}; set --expectosc-id-col")
++    z = z.drop_duplicates(id_col).set_index(id_col)
++    cells = celltypes.split(',') if celltypes else list(z.select_dtypes('number').columns)
++    z = z[cells]
++    abs_max = z.abs().max(axis=1)
++    summary = pd.DataFrame({
++        'expectosc_max_abs_z': abs_max,
++        'expectosc_max_celltype': z.abs().idxmax(axis=1),
++        'expectosc_n_celltypes': (z.abs() > abs_z).sum(axis=1),
++    })
++    out = out.merge(summary, left_on='VariantID', right_index=True, how='left')
++    out['expression_altered'] = flag(out.expectosc_max_abs_z, out.expectosc_max_abs_z > abs_z)
++    n_hit = out.expectosc_max_abs_z.notna().sum()
++    print(f"ExPectoSC: matched {n_hit}/{len(out)} variants on {id_col}", file=sys.stderr)
++    return out
++
++
++GROUP_FLAGS = ['lof', 'damaging_missense', 'splice_disrupted', 'expression_altered']
++
++
++def main(argv=None):
++    args = parse_args(argv)
++    th = {**DEFAULTS, **json.loads(args.thresholds)}
++    unknown = set(json.loads(args.thresholds)) - set(DEFAULTS)
++    if unknown:
++        raise ValueError(f"Unknown threshold key(s): {sorted(unknown)}; allowed: {sorted(DEFAULTS)}")
++    genes = args.genes.split(',')
++
++    records, fields, csq = read_vep_vcf(args.vep_vcf)
++    picked = pick_entries(csq, genes)
++    out, available = classify(records, picked, genes, th)
++    if args.regions:
++        reg = (pd.read_csv(args.regions)[['VariantID', 'gene', 'region', 'tss_distance']]
++               .drop_duplicates('VariantID'))
++        out = (out.rename(columns={'gene': 'vep_symbol', 'region': 'vep_region'})
++                  .merge(reg, on='VariantID', how='left'))
++        out['gene'] = out.gene.fillna(out.vep_symbol)
++        out['region'] = out.region.fillna(out.vep_region)
++    if args.expectosc:
++        out = add_expectosc(out, args.expectosc, args.expectosc_id_col,
++                            args.expectosc_celltypes, th['expectosc_abs_z'])
++
++    missing = sorted(set(MISSENSE_TOOLS + SPLICE_TOOLS) - set(available))
++    print(f"{len(out)} variants; tools found: {available}", file=sys.stderr)
++    if missing:
++        print(f"Tools without CSQ fields (flags left NA): {missing}. "
++              "Enable them under vep: in the config.", file=sys.stderr)
++
++    flags = [f for f in GROUP_FLAGS if f in out]
++    hits = pd.DataFrame({f: out[f].astype('boolean').fillna(False).astype(bool) for f in flags})
++    out['evidence'] = hits.apply(lambda r: ';'.join(f for f in flags if r[f]), axis=1)
++    args.out_tsv.parent.mkdir(parents=True, exist_ok=True)
++    out.to_csv(args.out_tsv, sep='\t', index=False)
++
++    if args.summary:
++        summary = (out.assign(**hits)
++                   .groupby('gene', dropna=False)
++                   .agg(variants=('VariantID', 'size'),
++                        coding=('coding', 'sum'),
++                        **{f: (f, 'sum') for f in flags}))
++        summary.to_csv(args.summary, sep='\t')
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/workflow/scripts/make_ism_regions.py b/workflow/scripts/make_ism_regions.py
+new file mode 100644
+index 0000000..37c4cbe
+--- /dev/null
++++ b/workflow/scripts/make_ism_regions.py
+@@ -0,0 +1,56 @@
++#!/usr/bin/env python3
++"""
++make_ism_regions.py
++===================
++
++One ISM window per target gene: the MANE Select transcript extended by
++``--flank`` bp on both sides (or, with ``--around-tss``, the MANE TSS +/- flank),
++clipped at 0. Output (0-based, half-open): ``chrom, start, end, gene, strand, tss``.
++
++Usage
++-----
++::
++
++    python make_ism_regions.py GTF_FEATHER OUT_TSV --genes G1,G2 [--flank 100000] [--around-tss]
++"""
++
++import argparse
++
++import numpy as np
++import pandas as pd
++
++
++def main(argv=None):
++    p = argparse.ArgumentParser(description=__doc__.split('\n\n')[1])
++    p.add_argument('gtf', help='GENCODE hg38 GTF as feather (path or URL), as in vep_report.py')
++    p.add_argument('out_tsv')
++    p.add_argument('--genes', required=True)
++    p.add_argument('--flank', type=int, default=100_000)
++    p.add_argument('--around-tss', action='store_true')
++    args = p.parse_args(argv)
++
++    genes = args.genes.split(',')
++    gtf = pd.read_feather(args.gtf, columns=['Chromosome', 'Start', 'End', 'Strand', 'Feature',
++                                             'gene_name', 'tag'])
++    mane = gtf[(gtf.Feature == 'transcript') & gtf.gene_name.isin(genes)
++               & gtf.tag.str.contains('MANE_Select', na=False)].drop_duplicates('gene_name')
++    missing = sorted(set(genes) - set(mane.gene_name))
++    if missing:
++        raise ValueError(f"No MANE Select transcript for: {missing}")
++    tss = np.where(mane.Strand == '-', mane.End, mane.Start + 1)
++    lo, hi = (tss, tss) if args.around_tss else (mane.Start.values, mane.End.values)
++    out = pd.DataFrame({
++        'chrom': mane.Chromosome.values,
++        'start': np.maximum(lo - args.flank, 0),
++        'end': hi + args.flank,
++        'gene': mane.gene_name.values,
++        'strand': mane.Strand.values,
++        'tss': tss,
++    }).sort_values('gene')
++    out.to_csv(args.out_tsv, sep='\t', index=False)
++    print(f"{len(out)} regions, {(out.end - out.start).sum() / 1e6:.1f} Mb in total "
++          f"(~{3 * (out.end - out.start).sum() / 1e6:.0f} M SNVs)")
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/workflow/scripts/merge_sei_scores.py b/workflow/scripts/merge_sei_scores.py
+new file mode 100644
+index 0000000..2ce0d8b
+--- /dev/null
++++ b/workflow/scripts/merge_sei_scores.py
+@@ -0,0 +1,109 @@
++#!/usr/bin/env python3
++"""
++merge_sei_scores.py
++===================
++
++Join Sei sequence-class variant effects back onto the variant table.
++
++Input
++-----
++``SCORES_NPY``   ``<prefix>.sequence_class_scores.npy`` from
++                 ``2_varianteffect_sc_score.py --no-tsv`` (alt - ref, histone-
++                 normalised), rows in the order of ...
++``ROW_LABELS``   ``<prefix>_row_labels.txt`` (Selene: chrom, pos, name, ref, alt,
++                 strand, ref_match, contains_unk)
++``SEQCLASS``     ``model/seqclass.names`` from the Sei framework (one class per line,
++                 e.g. ``TF3 FOXA1 / AR / ESR1``)
++``EFFECTS_TSV``  classify_variant_effects output (``VariantID`` column)
++
++Output
++------
++``OUT_TSV``: the effects table (all rows) plus, per variant:
++
++* ``sei_ref_match``, ``sei_contains_unk``: Selene QC; a False ref_match means the
++  VCF REF did not match the FASTA, so treat those scores with care
++* ``sei_max_abs``, ``sei_top_class``, ``sei_top_score``: strongest class effect
++* ``sei_<group>_max``: signed score of the largest-magnitude class per group
++  (P, E, CTCF, TF, PC, HET, TN, L)
++* ``sei_<label>`` for every sequence class (e.g. ``sei_TF3``, ``sei_E6``)
++
++``--long`` optionally writes a long table (VariantID, class, name, group, score).
++
++Usage
++-----
++::
++
++    python merge_sei_scores.py SCORES_NPY ROW_LABELS SEQCLASS EFFECTS_TSV OUT_TSV [--long TSV]
++"""
++
++import argparse
++import re
++import sys
++
++import numpy as np
++import pandas as pd
++
++
++def read_classes(path, n_columns):
++    names = [line.strip() for line in open(path) if line.strip()]
++    labels = [n.split(' ', 1)[0] for n in names]
++    if n_columns > len(names):   # unnamed extra classes, if any
++        extra = range(len(names), n_columns)
++        names += [f'SC{i} unnamed' for i in extra]
++        labels += [f'SC{i}' for i in extra]
++    return pd.DataFrame({'label': labels[:n_columns], 'name': names[:n_columns],
++                         'group': [re.match(r'[A-Z]+', lab).group(0) for lab in labels[:n_columns]]})
++
++
++def main(argv=None):
++    p = argparse.ArgumentParser(description=__doc__.split('\n\n')[1])
++    p.add_argument('scores_npy')
++    p.add_argument('row_labels')
++    p.add_argument('seqclass_names')
++    p.add_argument('effects_tsv')
++    p.add_argument('out_tsv')
++    p.add_argument('--long', default=None)
++    args = p.parse_args(argv)
++
++    scores = np.load(args.scores_npy)
++    rows = pd.read_csv(args.row_labels, sep='\t', dtype={'chrom': str})
++    if len(rows) != scores.shape[0]:
++        raise ValueError(f"{args.row_labels} has {len(rows)} rows but {args.scores_npy} "
++                         f"has {scores.shape[0]}")
++    classes = read_classes(args.seqclass_names, scores.shape[1])
++
++    sc = pd.DataFrame(scores, columns='sei_' + classes.label)
++    sc.insert(0, 'VariantID', rows['name'].astype(str).values)
++    sc['sei_ref_match'] = rows['ref_match'].values
++    sc['sei_contains_unk'] = rows['contains_unk'].values
++    absval = np.abs(scores)
++    top = absval.argmax(axis=1)
++    sc['sei_max_abs'] = absval.max(axis=1)
++    sc['sei_top_class'] = classes.name.values[top]
++    sc['sei_top_score'] = scores[np.arange(len(scores)), top]
++    for group, idx in classes.groupby('group').groups.items():
++        sub = scores[:, idx]
++        sc[f'sei_{group}_max'] = sub[np.arange(len(sub)), np.abs(sub).argmax(axis=1)]
++    sc = sc.drop_duplicates('VariantID')
++
++    effects = pd.read_csv(args.effects_tsv, sep='\t')
++    summary_cols = ['sei_ref_match', 'sei_contains_unk', 'sei_max_abs', 'sei_top_class',
++                    'sei_top_score'] + sorted(c for c in sc if c.endswith('_max') and c != 'sei_max_abs')
++    class_cols = list('sei_' + classes.label)
++    out = effects.merge(sc[['VariantID'] + summary_cols + class_cols], on='VariantID', how='left')
++    out.to_csv(args.out_tsv, sep='\t', index=False)
++    n_scored = out.sei_max_abs.notna().sum()
++    n_bad = (sc.sei_ref_match.astype(str) == 'False').sum()
++    print(f"Sei scores for {n_scored}/{len(out)} variants; {n_bad} with REF mismatch",
++          file=sys.stderr)
++
++    if args.long:
++        long = sc.melt(id_vars='VariantID', value_vars=class_cols, var_name='label',
++                       value_name='score')
++        long['label'] = long.label.str.removeprefix('sei_')
++        long = long.merge(classes, on='label')
++        long.to_csv(args.long, sep='\t', index=False)
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/workflow/scripts/prepare_sei_vcf.py b/workflow/scripts/prepare_sei_vcf.py
+new file mode 100644
+index 0000000..aa0ad55
+--- /dev/null
++++ b/workflow/scripts/prepare_sei_vcf.py
+@@ -0,0 +1,60 @@
++#!/usr/bin/env python3
++"""
++prepare_sei_vcf.py
++==================
++
++Write the minimal VCF that Sei (via Selene) expects, from the
++classify_variant_effects table: ``chr``-prefixed CHROM, POS, ID = VariantID,
++REF, ALT, then ``. . .``. Sei's bundled hg38 FASTA uses UCSC names, so the
++chromosome naming must match.
++
++* ``--include noncoding`` (default) keeps ``coding == False`` variants, as for
++  AlphaGenome; ``all`` keeps every variant.
++* ``--snv-only`` drops indels. Otherwise indels are kept; Selene centres the
++  4,096 bp window on the variant and reports REF mismatches in ``ref_match``.
++* Alleles with characters other than ACGT, and duplicate IDs, are dropped.
++
++Usage
++-----
++::
++
++    python prepare_sei_vcf.py EFFECTS_TSV OUT_VCF [--include noncoding|all] [--snv-only]
++"""
++
++import argparse
++import sys
++
++import pandas as pd
++
++
++def main(argv=None):
++    p = argparse.ArgumentParser(description=__doc__.split('\n\n')[1])
++    p.add_argument('effects_tsv')
++    p.add_argument('out_vcf')
++    p.add_argument('--include', choices=['noncoding', 'all'], default='noncoding')
++    p.add_argument('--snv-only', action='store_true')
++    args = p.parse_args(argv)
++
++    df = pd.read_csv(args.effects_tsv, sep='\t', dtype={'chrom': str})
++    n = len(df)
++    if args.include == 'noncoding':
++        df = df[~df.coding.astype(bool)]
++    acgt = df.ref.str.fullmatch('[ACGT]+') & df.alt.str.fullmatch('[ACGT]+')
++    if (~acgt).any():
++        print(f"Dropping {(~acgt).sum()} variants with non-ACGT alleles", file=sys.stderr)
++    df = df[acgt]
++    if args.snv_only:
++        df = df[(df.ref.str.len() == 1) & (df.alt.str.len() == 1)]
++    df = df.drop_duplicates('VariantID').copy()
++    df['chrom'] = 'chr' + df.chrom.str.removeprefix('chr')
++    df = df.sort_values(['chrom', 'pos'])
++
++    with open(args.out_vcf, 'w') as fh:
++        fh.write('##fileformat=VCFv4.2\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n')
++        for r in df.itertuples():
++            fh.write(f"{r.chrom}\t{r.pos}\t{r.VariantID}\t{r.ref}\t{r.alt}\t.\t.\t.\n")
++    print(f"Wrote {len(df)}/{n} variants ({args.include}) to {args.out_vcf}", file=sys.stderr)
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/workflow/scripts/query_alphagenome_atlas.py b/workflow/scripts/query_alphagenome_atlas.py
+new file mode 100644
+index 0000000..3a21c5f
+--- /dev/null
++++ b/workflow/scripts/query_alphagenome_atlas.py
+@@ -0,0 +1,220 @@
++#!/usr/bin/env python3
++"""
++query_alphagenome_atlas.py
++==========================
++
++Fetch precomputed AlphaGenome scores from the AlphaGenome Atlas (``alphagenome.atlas``),
++as in ``notebooks/alphagenome_atlas_BRCA1.ipynb``, for a list of SNVs or for every
++SNV in a set of regions (in silico mutagenesis, ISM).
++
++The Atlas returns stored scores, so it is far cheaper than running the model:
++use it for SNVs and the model API (score_variants_alphagenome.py) for indels and
++for anything the Atlas does not hold.
++
++Modes
++-----
++``variants VARIANTS_TSV OUT``
++    VARIANTS_TSV has ``variant_id, CHROM, POS, REF, ALT, gene`` (from
++    select_alphagenome_variants.py). Variants are queried per target gene, so
++    gene-level scorers (RNA_SEQ, SPLICE_SITES, ...) report the effect on that gene.
++    Variants the Atlas has no scores for are written to ``--missing``.
++``interval REGIONS_TSV OUT``
++    REGIONS_TSV has ``chrom, start, end, gene`` (0-based, half-open); every SNV in
++    each region is fetched in ``--chunk`` bp pieces, effects reported for ``gene``.
++
++Output
++------
++``OUT`` (parquet, or TSV if it ends in .tsv/.tsv.gz): one row per variant (and
++gene), columns ``variant_id, gene, chrom, pos, ref, alt`` then one column per
++scorer track, named ``<SCORER>:<track name>[:<strand>]``, plus ``<column>|q`` for
++the calibrated quantile where the Atlas provides one.
++
++Pieces are cached under ``--cache`` (one parquet per gene / chunk), so a rerun
++after an interruption only fetches what is missing.
++
++Usage
++-----
++::
++
++    python query_alphagenome_atlas.py variants snvs.tsv atlas.parquet --missing missing.tsv
++        [--scorers AVI_SCORE,RNA_SEQ,...] [--ontology-terms CL:0002327,...] [--cache DIR]
++    python query_alphagenome_atlas.py interval regions.tsv ism.parquet --chunk 4000
++"""
++
++import argparse
++import hashlib
++import sys
++from pathlib import Path
++
++import pandas as pd
++
++sys.path.insert(0, str(Path(__file__).resolve().parent))
++from alphagenome_utils import chunks, load_api_key, read_variants, with_retries  # noqa: E402
++
++DEFAULT_SCORERS = 'AVI_SCORE,RNA_SEQ,SPLICE_SITES,DNASE,CAGE,CHIP_HISTONE'
++DEFAULT_ONTOLOGY = 'CL:0002327'   # mammary epithelial cell
++
++
++def parse_args(argv=None):
++    p = argparse.ArgumentParser(description=__doc__.split('\n\n')[1])
++    p.add_argument('mode', choices=['variants', 'interval'])
++    p.add_argument('input')
++    p.add_argument('output', type=Path)
++    p.add_argument('--missing', type=Path, default=None,
++                   help='variants mode: write variants without Atlas scores here')
++    p.add_argument('--scorers', default=DEFAULT_SCORERS)
++    p.add_argument('--ontology-terms', default=DEFAULT_ONTOLOGY,
++                   help="Comma-separated ontology CURIEs; '' for all biosamples")
++    p.add_argument('--cache', type=Path, default=None)
++    p.add_argument('--batch-size', type=int, default=200, help='variants mode: variants per query')
++    p.add_argument('--chunk', type=int, default=4000, help='interval mode: bp per query')
++    p.add_argument('--gene', default=None, help='interval mode: only the region(s) of this gene')
++    p.add_argument('--max-workers', type=int, default=10)
++    p.add_argument('--api-key-file', default=None)
++    p.add_argument('--timeout', type=float, default=120)
++    return p.parse_args(argv)
++
++
++def tidy_atlas(result, gene):
++    """One row per variant, one column per scorer track (raw score, and ``|q`` quantile)."""
++    frames = []
++    for scorer, ad in result.items():
++        if ad.n_obs == 0 or ad.obs is None or 'variant' not in ad.obs:
++            continue  # e.g. splice scores outside the gene body
++        names = ad.var['name'].astype(str).str.replace('Histone ChIP-seq', '').str.strip()
++        strands = (ad.var['strand'].map(lambda s: '' if s == '.' else f':{s}')
++                   if 'strand' in ad.var else '')
++        cols = [f'{scorer}:{n}{s}' for n, s in zip(names, strands)]
++        df = pd.DataFrame(ad.X, columns=cols)
++        if 'quantiles' in ad.layers:
++            df = df.join(pd.DataFrame(ad.layers['quantiles'], columns=[c + '|q' for c in cols]))
++        df['variant'] = ad.obs['variant'].astype(str).values
++        if 'gene_name' in ad.obs:
++            df = df[(ad.obs['gene_name'] == gene).values]
++        df = df.loc[:, ~df.columns.duplicated()]
++        frames.append(df.drop_duplicates('variant').set_index('variant'))
++    if not frames:
++        return pd.DataFrame(columns=['variant'])
++    return pd.concat(frames, axis=1).reset_index()
++
++
++def split_variant_key(df):
++    parts = df['variant'].str.extract(
++        r'^(?P<chrom>[^:]+):(?P<pos>\d+):(?P<ref>[ACGTN]+)>(?P<alt>[ACGTN]+)$')
++    return pd.concat([parts.astype({'pos': 'Int64'}), df.drop(columns='variant')], axis=1)
++
++
++def write_table(df, path):
++    path.parent.mkdir(parents=True, exist_ok=True)
++    if str(path).endswith(('.tsv', '.tsv.gz')):
++        df.to_csv(path, sep='\t', index=False)
++    else:
++        df.to_parquet(path, index=False)
++
++
++class Atlas:
++    def __init__(self, args):
++        from alphagenome.atlas import atlas
++        self.client = atlas.create(load_api_key(args.api_key_file), timeout=args.timeout)
++        self.scorers = [s for s in args.scorers.split(',') if s]
++        self.ontology = [t for t in args.ontology_terms.split(',') if t] or None
++        self.max_workers = args.max_workers
++        tag = hashlib.md5(f"{self.scorers}{self.ontology}".encode()).hexdigest()[:8]
++        self.cache = (args.cache or args.output.parent / f'.{args.output.stem}_cache') / tag
++        self.cache.mkdir(parents=True, exist_ok=True)
++
++    def query_variants(self, variants, gene):
++        return self.client.query_variants(
++            variants, requested_scorers=self.scorers, ontology_terms=self.ontology,
++            gene_names=[gene], progress_bar=False, max_workers=self.max_workers)
++
++    def query_interval(self, interval, gene):
++        return self.client.query_interval(
++            interval, requested_scorers=self.scorers, ontology_terms=self.ontology,
++            gene_names=[gene], progress_bar=False, max_workers=self.max_workers)
++
++
++def run_variants(args, atlas):
++    from alphagenome.data import genome
++    df = read_variants([args.input])
++    if 'gene' not in df:
++        raise ValueError(f"{args.input} needs a 'gene' column (target gene per variant)")
++    df = df[(df.REF.str.len() == 1) & (df.ALT.str.len() == 1)]
++    frames, missing = [], []
++    for gene, group in df.groupby('gene', sort=True):
++        for i, batch in chunks(group, args.batch_size):
++            ids = ','.join(batch.variant_id)
++            path = atlas.cache / f"{gene}_{hashlib.md5(ids.encode()).hexdigest()[:12]}.parquet"
++            if not path.exists():
++                variants = [genome.Variant(r.CHROM, int(r.POS), r.REF, r.ALT, name=r.variant_id)
++                            for r in batch.itertuples()]
++                try:
++                    result = with_retries(lambda: atlas.query_variants(variants, gene),
++                                          f'{gene} batch {i}', attempts=3)
++                    tidy = tidy_atlas(result, gene)
++                except ValueError:
++                    # A variant the Atlas does not hold fails the whole batch: retry one by one.
++                    parts = []
++                    for v in variants:
++                        try:
++                            parts.append(tidy_atlas(atlas.query_variants([v], gene), gene))
++                        except ValueError as err:
++                            print(f"not in Atlas: {v} ({str(err)[:120]})", file=sys.stderr)
++                    tidy = pd.concat(parts, ignore_index=True) if parts else tidy_atlas({}, gene)
++                tidy.to_parquet(path, index=False)
++            tidy = pd.read_parquet(path)
++            keys = {str(genome.Variant(r.CHROM, int(r.POS), r.REF, r.ALT)): r.variant_id
++                    for r in batch.itertuples()}
++            tidy['variant_id'] = tidy['variant'].map(keys)
++            tidy['gene'] = gene
++            frames.append(tidy)
++            found = set(tidy.variant_id.dropna())
++            missing.append(batch[~batch.variant_id.isin(found)])
++        print(f"{gene}: {len(group)} SNVs queried", file=sys.stderr)
++
++    out = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=['variant'])
++    out = split_variant_key(out)
++    lead = ['variant_id', 'gene', 'chrom', 'pos', 'ref', 'alt']
++    out = out[lead + [c for c in out.columns if c not in lead]]
++    write_table(out, args.output)
++    miss = pd.concat(missing, ignore_index=True) if missing else df.iloc[:0]
++    if args.missing:
++        miss.to_csv(args.missing, sep='\t', index=False)
++    print(f"Atlas scores for {out.variant_id.nunique()}/{len(df)} SNVs; "
++          f"{len(miss)} missing", file=sys.stderr)
++
++
++def run_interval(args, atlas):
++    from alphagenome.data import genome
++    regions = pd.read_csv(args.input, sep='\t')
++    if args.gene:
++        regions = regions[regions.gene == args.gene]
++        if regions.empty:
++            raise ValueError(f"No region for gene {args.gene} in {args.input}")
++    frames = []
++    for r in regions.itertuples():
++        for start in range(int(r.start), int(r.end), args.chunk):
++            end = min(start + args.chunk, int(r.end))
++            path = atlas.cache / f"{r.gene}_{r.chrom}_{start}_{end}.parquet"
++            if not path.exists():
++                interval = genome.Interval(r.chrom, start, end)
++                result = with_retries(lambda: atlas.query_interval(interval, r.gene),
++                                      f'{r.gene} {r.chrom}:{start}-{end}')
++                tidy_atlas(result, r.gene).to_parquet(path, index=False)
++            frames.append(pd.read_parquet(path).assign(gene=r.gene))
++        print(f"{r.gene}: {r.chrom}:{r.start}-{r.end} done", file=sys.stderr)
++    out = split_variant_key(pd.concat(frames, ignore_index=True))
++    out['variant_id'] = (out.chrom + '_' + out.pos.astype(str) + '_' + out.ref + '_' + out.alt)
++    lead = ['variant_id', 'gene', 'chrom', 'pos', 'ref', 'alt']
++    out = out[lead + [c for c in out.columns if c not in lead]].sort_values(['gene', 'pos', 'alt'])
++    write_table(out, args.output)
++
++
++def main(argv=None):
++    args = parse_args(argv)
++    atlas = Atlas(args)
++    (run_variants if args.mode == 'variants' else run_interval)(args, atlas)
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/workflow/scripts/score_variants_alphagenome.py b/workflow/scripts/score_variants_alphagenome.py
+index ba1a5d2..503ae68 100644
+--- a/workflow/scripts/score_variants_alphagenome.py
++++ b/workflow/scripts/score_variants_alphagenome.py
+@@ -1,249 +1,181 @@
+-from io import StringIO
++#!/usr/bin/env python3
++"""
++score_variants_alphagenome.py
++=============================
++
++Score variants with the AlphaGenome model API (``dna_client.score_variants``).
++
++Use this for variants the AlphaGenome Atlas does not hold (indels, and SNVs the
++Atlas has no scores for); SNVs are cheaper through query_alphagenome_atlas.py.
++
++Input
++-----
++One or more TSVs with ``variant_id, CHROM, POS, REF, ALT`` and optionally
++``gene`` (the target gene; empty files are fine). Duplicate IDs are dropped.
++
++Method
++------
++* Variants are scored in batches of ``--batch-size`` with the recommended
++  scorers selected by ``--scorers`` (or switched off with ``--no-<scorer>``),
++  in a ``--sequence-length`` window centred on the variant.
++* To keep the output manageable, each batch's tidy scores are filtered to the
++  ``--ontology-terms`` biosamples (``''`` keeps all) and, for gene-level scorers,
++  to the variant's ``gene`` (``--all-genes`` keeps every gene in the window).
++* Each batch is cached as parquet under ``--cache``; a rerun only scores
++  batches that are missing. Transient API errors are retried with back-off.
++
++Output
++------
++Long table, one row per (variant, gene, track), as
++``alphagenome.models.variant_scorers.tidy_scores`` (raw_score, quantile_score,
++track and biosample metadata). Parquet unless the path ends in .csv/.csv.gz.
++
++API key: ``--api-key-file``, else ``$ALPHAGENOME_API_KEY``, else
++``resources/API_KEY``. Never commit the key.
++
++Usage
++-----
++::
++
++    python score_variants_alphagenome.py OUT INPUT_TSV [INPUT_TSV ...]
++        [--scorers RNA_SEQ,SPLICE_SITES,...] [--ontology-terms CL:0002327,...]
++        [--sequence-length 1MB] [--batch-size 20] [--cache DIR]
++"""
+ 
+-from alphagenome.data import genome
+-from alphagenome.models import dna_client, variant_scorers
+-import pandas as pd
+-from tqdm import tqdm
+ import argparse
++import hashlib
++import sys
++from pathlib import Path
+ 
++import pandas as pd
+ 
+-API_KEY = "***REMOVED***"
+-dna_model = dna_client.create(API_KEY)
+-
+-
+-def run_alphagenome(args):
+-    vcf = pd.read_csv(args.input, sep='\t')
+-
+-    required_columns = ['variant_id', 'CHROM', 'POS', 'REF', 'ALT']
+-
+-    for column in required_columns:
+-        if column not in vcf.columns:
+-            raise ValueError(f'VCF file is missing required column: {column}.')
+-
+-    organism = args.organism
+-    sequence_length = args.sequence_length
+-    sequence_length = dna_client.SUPPORTED_SEQUENCE_LENGTHS[
+-        f'SEQUENCE_LENGTH_{sequence_length}'
+-    ]
+-
+-    # Scorers
+-    score_rna_seq = args.score_rna_seq
+-    score_cage = args.score_cage
+-    score_procap = args.score_procap
+-    score_atac = args.score_atac
+-    score_dnase = args.score_dnase
+-    score_chip_histone = args.score_chip_histone
+-    score_chip_tf = args.score_chip_tf
+-    score_polyadenylation = args.score_polyadenylation
+-    score_splice_sites = args.score_splice_sites
+-    score_splice_site_usage = args.score_splice_site_usage
+-    score_splice_junctions = args.score_splice_junctions
+-
+-    organism_map = {
+-        'human': dna_client.Organism.HOMO_SAPIENS,
+-        'mouse': dna_client.Organism.MUS_MUSCULUS
+-    }
+-    organism = organism_map[organism]
+-
+-    # Parse scorer specification.
+-    scorer_selections = {
+-        'rna_seq': score_rna_seq,
+-        'cage': score_cage,
+-        'procap': score_procap,
+-        'atac': score_atac,
+-        'dnase': score_dnase,
+-        'chip_histone': score_chip_histone,
+-        'chip_tf': score_chip_tf,
+-        'polyadenylation': score_polyadenylation,
+-        'splice_sites': score_splice_sites,
+-        'splice_site_usage': score_splice_site_usage,
+-        'splice_junctions': score_splice_junctions,
+-    }
+-
+-    all_scorers = variant_scorers.RECOMMENDED_VARIANT_SCORERS
+-    selected_scorers = [
+-        all_scorers[key]
+-        for key in all_scorers
+-        if scorer_selections.get(key.lower(), False)
+-    ]
+-
+-    # Drop scorers or outputs not supported for selected organism
+-    unsupported_scorers = [
+-        scorer
+-        for scorer in selected_scorers
+-            if (
+-                organism.value
+-                not in variant_scorers.SUPPORTED_ORGANISMS[scorer.base_variant_scorer]
+-            )
+-            | (
+-                (scorer.requested_output == dna_client.OutputType.PROCAP)
+-                & (organism == dna_client.Organism.MUS_MUSCULUS)
+-            )
+-    ]
+-    if len(unsupported_scorers) > 0:
+-        print(
+-            f'Excluding {unsupported_scorers} scorers as they are not supported for'
+-            f' {organism}.'
+-        )
+-        for unsupported_scorer in unsupported_scorers:
+-            selected_scorers.remove(unsupported_scorers)
+-
+-    # Score variants in the VCF file
+-    results = []
+-
+-    for i, vcf_row in tqdm(vcf.iterrows(), total=len(vcf)):
+-        variant = genome.Variant(
+-            chromosome=str(vcf_row.CHROM),
+-            position=int(vcf_row.POS),
+-            reference_bases=vcf_row.REF,
+-            alternate_bases=vcf_row.ALT,
+-            name=vcf_row.variant_id,
+-        )
+-        interval = variant.reference_interval.resize(sequence_length)
+-
+-        variant_scores = dna_model.score_variant(
+-            interval=interval,
+-            variant=variant,
+-            variant_scorers=selected_scorers,
+-            organism=organism,
+-        )
+-        results.append(variant_scores)
+-
+-    df_scores = variant_scorers.tidy_scores(results)
+-
+-    df_scores.to_csv(args.output, index=False)
+-
+-
+-def main():
+-    parser = argparse.ArgumentParser(
+-        description='predict functional score on variants with alphagenome'
+-    )
+-
+-    # Required posiitonal arguments
+-    parser.add_argument(
+-        "input", 
+-        help='input tsv in VCF format for AlphaGenome'
+-    )
+-    parser.add_argument(
+-        'output', 
+-        help='output matrix'
+-    )
+-
+-    # General settings
+-    parser.add_argument(
+-        "--organism", 
+-        default='human', 
+-        choices=['human', 'mouse'],
+-        help='human or mouse genome, (default: %(default)s)'
+-    )
+-
+-    parser.add_argument(
+-        "--sequence_length", 
+-        default="1MB", 
+-        choices=['16KB', '100KB', '500KB', '1MB'],
+-        help="sequence around variants to predict, (default: %(default)s)")
+-
+-    # ------------------------------------------------------------------
+-    # Scorers: ON by default, --no-X disables them
+-    # ------------------------------------------------------------------
+-
+-    parser.add_argument(
+-        "--no-rna-seq",
+-        dest="score_rna_seq",
+-        action="store_false",
+-        help="Disable RNA-seq scorer",
+-    )
+-
+-    parser.add_argument(
+-        "--no-cage",
+-        dest="score_cage",
+-        action="store_false",
+-        help="Disable CAGE scorer",
+-    )
+-
+-    parser.add_argument(
+-        "--no-procap",
+-        dest="score_procap",
+-        action="store_false",
+-        help="Disable PRO-cap scorer",
+-    )
+-
+-    parser.add_argument(
+-        "--no-atac",
+-        dest="score_atac",
+-        action="store_false",
+-        help="Disable ATAC scorer",
+-    )
+-
+-    parser.add_argument(
+-        "--no-dnase",
+-        dest="score_dnase",
+-        action="store_false",
+-        help="Disable DNase scorer",
+-    )
+-
+-    parser.add_argument(
+-        "--no-chip-histone",
+-        dest="score_chip_histone",
+-        action="store_false",
+-        help="Disable ChIP histone scorer",
+-    )
+-
+-    parser.add_argument(
+-        "--no-chip-tf",
+-        dest="score_chip_tf",
+-        action="store_false",
+-        help="Disable ChIP TF scorer",
+-    )
+-
+-    parser.add_argument(
+-        "--no-polyadenylation",
+-        dest="score_polyadenylation",
+-        action="store_false",
+-        help="Disable polyadenylation scorer",
+-    )
+-
+-    parser.add_argument(
+-        "--no-splice-sites",
+-        dest="score_splice_sites",
+-        action="store_false",
+-        help="Disable splice sites scorer",
+-    )
+-
+-    parser.add_argument(
+-        "--no-splice-site-usage",
+-        dest="score_splice_site_usage",
+-        action="store_false",
+-        help="Disable splice site usage scorer",
+-    )
+-
+-    parser.add_argument(
+-        "--no-splice-junctions",
+-        dest="score_splice_junctions",
+-        action="store_false",
+-        help="Disable splice junctions scorer",
+-    )
+-
+-    # All scorers default to True
+-    parser.set_defaults(
+-        score_rna_seq=True,
+-        score_cage=True,
+-        score_procap=True,
+-        score_atac=True,
+-        score_dnase=True,
+-        score_chip_histone=True,
+-        score_chip_tf=True,
+-        score_polyadenylation=True,
+-        score_splice_sites=True,
+-        score_splice_site_usage=True,
+-        score_splice_junctions=True,
+-    )
+-
+-
+-    args = parser.parse_args()
+-
+-    run_alphagenome(args)
+-
+-
+-if __name__ == "__main__":
+-    main()
+\ No newline at end of file
++sys.path.insert(0, str(Path(__file__).resolve().parent))
++from alphagenome_utils import chunks, load_api_key, read_variants, with_retries  # noqa: E402
++
++SCORER_KEYS = ['RNA_SEQ', 'CAGE', 'PROCAP', 'ATAC', 'DNASE', 'CHIP_HISTONE', 'CHIP_TF',
++               'POLYADENYLATION', 'SPLICE_SITES', 'SPLICE_SITE_USAGE', 'SPLICE_JUNCTIONS']
++DEFAULT_ONTOLOGY = 'CL:0002327'   # mammary epithelial cell
++
++
++def parse_args(argv=None):
++    p = argparse.ArgumentParser(description=__doc__.split('\n\n')[1])
++    p.add_argument('output', type=Path)
++    p.add_argument('inputs', nargs='+', help='variant TSV(s)')
++    p.add_argument('--organism', default='human', choices=['human', 'mouse'])
++    p.add_argument('--sequence-length', '--sequence_length', dest='sequence_length',
++                   default='1MB', choices=['16KB', '100KB', '500KB', '1MB'])
++    p.add_argument('--scorers', default=','.join(SCORER_KEYS),
++                   help='Comma-separated recommended scorers (default: %(default)s)')
++    for key in SCORER_KEYS:   # backwards compatible --no-<scorer> switches
++        p.add_argument(f"--no-{key.lower().replace('_', '-')}", dest='disabled',
++                       action='append_const', const=key, help=f'Disable the {key} scorer')
++    p.add_argument('--ontology-terms', default=DEFAULT_ONTOLOGY,
++                   help="Comma-separated ontology CURIEs to keep; '' keeps all")
++    p.add_argument('--all-genes', action='store_true',
++                   help="Keep gene-level scores for every gene, not only the variant's gene")
++    p.add_argument('--batch-size', type=int, default=20)
++    p.add_argument('--max-workers', type=int, default=5)
++    p.add_argument('--cache', type=Path, default=None)
++    p.add_argument('--api-key-file', default=None)
++    return p.parse_args(argv)
++
++
++def select_scorers(args, organism):
++    from alphagenome.models import dna_client, variant_scorers
++    wanted = [s for s in args.scorers.split(',') if s and s not in (args.disabled or [])]
++    unknown = set(wanted) - set(variant_scorers.RECOMMENDED_VARIANT_SCORERS)
++    if unknown:
++        raise ValueError(f"Unknown scorer(s) {sorted(unknown)}; "
++                         f"available: {list(variant_scorers.RECOMMENDED_VARIANT_SCORERS)}")
++    selected = []
++    for key in wanted:
++        scorer = variant_scorers.RECOMMENDED_VARIANT_SCORERS[key]
++        supported = organism.value in variant_scorers.SUPPORTED_ORGANISMS[scorer.base_variant_scorer]
++        if scorer.requested_output == dna_client.OutputType.PROCAP and \
++                organism == dna_client.Organism.MUS_MUSCULUS:
++            supported = False
++        if supported:
++            selected.append(scorer)
++        else:
++            print(f"Excluding {key}: not supported for {organism}", file=sys.stderr)
++    return selected
++
++
++def filter_scores(df, batch, ontology, all_genes):
++    """Keep the requested biosamples, and gene-level rows for the variant's own gene."""
++    if df is None or df.empty:
++        return pd.DataFrame()
++    df = df.copy()
++    df['variant_id'] = df['variant_id'].astype(str)
++    if ontology and 'ontology_curie' in df:
++        df = df[df.ontology_curie.isin(ontology)]
++    if not all_genes and 'gene' in batch and 'gene_name' in df:
++        names = {str(v): g for v, g in zip(batch.variant_key, batch.gene)}
++        target = df.variant_id.map(names)
++        df = df[df.gene_name.isna() | (df.gene_name == target) | target.isna()]
++    for c in df.columns:   # parquet needs plain types (Interval / Variant objects -> str)
++        if df[c].dtype == object:
++            df[c] = df[c].where(df[c].isna(), df[c].astype(str))
++    return df
++
++
++def main(argv=None):
++    args = parse_args(argv)
++    from alphagenome.data import genome
++    from alphagenome.models import dna_client, variant_scorers
++
++    variants = read_variants(args.inputs)
++    args.output.parent.mkdir(parents=True, exist_ok=True)
++    if variants.empty:
++        print("No variants to score", file=sys.stderr)
++        pd.DataFrame(columns=['variant_id']).to_parquet(args.output, index=False)
++        return
++
++    organism = {'human': dna_client.Organism.HOMO_SAPIENS,
++                'mouse': dna_client.Organism.MUS_MUSCULUS}[args.organism]
++    scorers = select_scorers(args, organism)
++    length = dna_client.SUPPORTED_SEQUENCE_LENGTHS[f'SEQUENCE_LENGTH_{args.sequence_length}']
++    ontology = [t for t in args.ontology_terms.split(',') if t]
++    model = dna_client.create(load_api_key(args.api_key_file))
++
++    tag = hashlib.md5(f"{args.scorers}{args.disabled}{length}{ontology}{args.all_genes}"
++                      .encode()).hexdigest()[:8]
++    cache = (args.cache or args.output.parent / f'.{args.output.stem}_cache') / tag
++    cache.mkdir(parents=True, exist_ok=True)
++
++    frames = []
++    n_batches = -(-len(variants) // args.batch_size)
++    for i, batch in chunks(variants, args.batch_size):
++        ids = ','.join(batch.variant_id)
++        path = cache / f"batch_{hashlib.md5(ids.encode()).hexdigest()[:12]}.parquet"
++        if not path.exists():
++            vs = [genome.Variant(r.CHROM, int(r.POS), r.REF, r.ALT, name=r.variant_id)
++                  for r in batch.itertuples()]
++            intervals = [v.reference_interval.resize(length) for v in vs]
++            batch = batch.assign(variant_key=[str(v) for v in vs])
++            scores = with_retries(
++                lambda: model.score_variants(intervals, vs, variant_scorers=scorers,
++                                             organism=organism, progress_bar=False,
++                                             max_workers=args.max_workers),
++                f'batch {i + 1}/{n_batches}')
++            tidy = variant_scorers.tidy_scores(scores)
++            filter_scores(tidy, batch, ontology, args.all_genes).to_parquet(path, index=False)
++        frames.append(pd.read_parquet(path))
++        print(f"batch {i + 1}/{n_batches} done", file=sys.stderr)
++
++    out = pd.concat(frames, ignore_index=True)
++    # tidy_scores names variants "chr:pos:ref>alt"; add the input IDs back
++    keys = {str(genome.Variant(r.CHROM, int(r.POS), r.REF, r.ALT)): r.variant_id
++            for r in variants.itertuples()}
++    out = out.rename(columns={'variant_id': 'variant'})
++    out.insert(0, 'variant_id', out.variant.map(keys))
++    if str(args.output).endswith(('.csv', '.csv.gz')):
++        out.to_csv(args.output, index=False)
++    else:
++        out.to_parquet(args.output, index=False)
++    print(f"{out.variant_id.nunique()}/{len(variants)} variants scored, {len(out)} rows",
++          file=sys.stderr)
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/workflow/scripts/select_alphagenome_variants.py b/workflow/scripts/select_alphagenome_variants.py
+new file mode 100644
+index 0000000..d4b8d69
+--- /dev/null
++++ b/workflow/scripts/select_alphagenome_variants.py
+@@ -0,0 +1,56 @@
++#!/usr/bin/env python3
++"""
++select_alphagenome_variants.py
++==============================
++
++Select the variants to score with AlphaGenome from the classify_variant_effects
++table, and write them in the input format of the AlphaGenome scripts
++(``variant_id, CHROM, POS, REF, ALT, gene``), split by variant type: the
++AlphaGenome Atlas only holds SNVs, everything else goes to the model API.
++
++By default all non-coding variants are selected (``coding == False``), which
++keeps canonical splice-site, UTR, intronic, promoter and distal variants.
++
++Usage
++-----
++::
++
++    python select_alphagenome_variants.py EFFECTS_TSV SNV_TSV OTHER_TSV
++        [--include noncoding|all] [--exclude-regions "3' UTR,downstream (≤5 kb)"]
++"""
++
++import argparse
++
++import pandas as pd
++
++
++def main(argv=None):
++    p = argparse.ArgumentParser(description=__doc__.split('\n\n')[1])
++    p.add_argument('effects_tsv')
++    p.add_argument('snv_tsv')
++    p.add_argument('other_tsv')
++    p.add_argument('--include', choices=['noncoding', 'all'], default='noncoding')
++    p.add_argument('--exclude-regions', default='',
++                   help='Comma-separated region classes (as in vep_report.py) to leave out')
++    args = p.parse_args(argv)
++
++    df = pd.read_csv(args.effects_tsv, sep='\t', dtype={'chrom': str})
++    n = len(df)
++    if args.include == 'noncoding':
++        df = df[~df.coding.astype(bool)]
++    excluded = [r for r in args.exclude_regions.split(',') if r]
++    if excluded:
++        df = df[~df.region.isin(excluded)]
++    out = pd.DataFrame({
++        'variant_id': df.VariantID, 'CHROM': df.chrom, 'POS': df.pos,
++        'REF': df.ref, 'ALT': df.alt, 'gene': df.gene, 'region': df.region,
++    }).drop_duplicates('variant_id')
++    is_snv = (out.REF.str.len() == 1) & (out.ALT.str.len() == 1)
++    out[is_snv].to_csv(args.snv_tsv, sep='\t', index=False)
++    out[~is_snv].to_csv(args.other_tsv, sep='\t', index=False)
++    print(f"Selected {len(out)}/{n} variants ({args.include}): "
++          f"{is_snv.sum()} SNVs, {(~is_snv).sum()} other")
++
++
++if __name__ == '__main__':
++    main()
+-- 
+2.43.0
+
