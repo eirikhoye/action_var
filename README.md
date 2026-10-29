@@ -108,6 +108,8 @@ To get one entry per variant, add `--pick` to the VEP call in `annotate_vep.py`.
 
 ## Effect prediction modules
 
+![Effect-prediction pipeline: VEP, Denise's criteria, AlphaGenome, Sei and the ISM side track](docs/effect_pipeline_flowchart.png)
+
 `config/config_effects_BRIDGES34_variants.yaml` runs the full chain. The modules are included in dependency order whatever their order in `modules`:
 
 | Module | Needs | Output |
