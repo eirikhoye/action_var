@@ -1,0 +1,40 @@
+# ---------------------------------------------------------------------------
+# BRIDGES 34 genes: every variant scored by AlphaGenome across all modalities
+# Run from the repo root:
+#   snakemake -s workflow/Snakefile --configfile config/config_alphagenome_modalities_BRIDGES34.yaml -c4
+# Reuses the VEP output of config_full_BRIDGES34_variants.yaml.
+# ---------------------------------------------------------------------------
+variants: /storage/mathelierarea/processed/eirikhoy/action_var/data/new_bridges_data/bridges_34genes.csv
+variants_build: hg19          # liftover to hg38 runs automatically if not hg38
+
+modules:
+  - annotate_vep
+  - alphagenome_modalities
+
+liftover:
+  output: test/new_bridges_data/bridges_34_genes_hg38.csv
+
+vep:
+  output: test/full_bridges_data_with_modules/bridges_34genes_vep.vcf
+  plugins:
+    AlphaMissense: {file: /storage/mathelierarea/raw/vep_plugins/AlphaMissense_hg38.tsv.gz}
+  report:
+    output: test/full_bridges_data_with_modules/bridges_34genes_vep_report.html
+    genes: [ABRAXAS1, AKT1, ATM, BABAM2, BARD1, BRCA1, BRCA2, BRIP1, CDH1,
+            CHEK2, EPCAM, FANCC, FANCM, GEN1, MEN1, MLH1, MRE11, MSH2, MSH6,
+            MUTYH, NBN, NF1, PALB2, PIK3CA, PMS2, PTEN, RAD50, RAD51C,
+            RAD51D, RECQL, RINT1, STK11, TP53, XRCC2]
+    gtf: https://storage.googleapis.com/alphagenome/reference/gencode/hg38/gencode.v46.annotation.gtf.gz.feather
+
+# ---------------------------------------------------------------------------
+# AlphaGenome, all variants, all modalities
+# ---------------------------------------------------------------------------
+alphagenome_modalities:
+  outdir: test/full_bridges_data_with_modules/alphagenome_modalities
+  regions: []                                   # all region classes, coding included
+  target_ontology: [CL:0002327, UBERON:0008367] # mammary epithelial cell, breast (GTEx/ENCODE)
+  api_key_file: resources/API_KEY               # git-ignored
+  report:
+    scale: dataset            # percentile among these variants (AlphaGenome quantiles saturate in genes)
+    high_quantile: 0.99
+    top_n: 25

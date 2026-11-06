@@ -117,6 +117,7 @@ To get one entry per variant, add `--pick` to the VEP call in `annotate_vep.py`.
 | `annotate_vep` | input variants | VEP VCF (+ SIFT, PolyPhen and plugins when configured), `vep_report` HTML and annotated CSV |
 | `variant_effects` | `annotate_vep` | `<vep stem>_effects.tsv`: Denise's criteria per variant, plus a per-gene summary |
 | `alphagenome` | `variant_effects` | `<vep stem>_alphagenome/`: Atlas scores for non-coding SNVs, model-API scores for indels and Atlas misses |
+| `alphagenome_modalities` | `annotate_vep` | `<vep report stem>_alphagenome_modalities/`: *every* variant scored across all AlphaGenome modalities, one summary row per variant, and an HTML report with a multi-modality gene view |
 | `sei` | `variant_effects` | `<vep stem>_sei/variant_effects_sei.tsv`: the effects table plus Sei sequence-class scores |
 | `alphagenome_ism` | `annotate_vep` | design skeleton, see `docs/ism_sei_design.md` |
 
@@ -158,6 +159,18 @@ Plugin data versions should match VEP 111; see https://www.ensembl.org/info/docs
 - **API key**: `resources/API_KEY` (git-ignored), `$ALPHAGENOME_API_KEY`, or `alphagenome.api_key_file`. Never put it in a script.
 
 Outputs: `atlas_scores.parquet` (one row per variant, one column per track, `|q` = calibrated quantile), `atlas_missing.tsv`, `model_scores.parquet` (long, as `tidy_scores`).
+
+### AlphaGenome, all modalities (`alphagenome_modalities`)
+
+Example: `config/config_alphagenome_modalities_BRIDGES34.yaml` (reuses the VEP output, runs only this module).
+
+- Scores **all** variants from the `vep_report` table, coding included: SNVs from the AlphaGenome Atlas (~25 min for 23k SNVs), indels / MNVs and Atlas misses from the model API (~1 s per variant). SNVs whose REF does not match hg38 are listed in `atlas_missing.tsv` and not sent to the model.
+- Scorers (default all): AVI_SCORE (Atlas only), RNA_SEQ, SPLICE_SITES, SPLICE_SITE_USAGE, SPLICE_JUNCTIONS, POLYADENYLATION, CAGE, PROCAP, DNASE, ATAC, CHIP_HISTONE, CHIP_TF, CONTACT_MAPS.
+- The thousands of tracks are reduced per scorer to: the strongest track in the target biosamples (`target_ontology`, default mammary epithelial cell + breast; `S|q`, `S|raw`) and the strongest track in any biosample (`S|q_all`, `S|raw_all`, `S|track_all`). ATAC (outside breast epithelium), PRO-cap and contact maps have no breast track; contact maps use any cell type. Gene-level scorers report the variant's own gene; `SPLICE_JUNCTIONS|junction` is the junction that changes most.
+- **Scale in the report** (`report.scale`): AlphaGenome's quantiles rank a variant against common variants genome-wide and saturate inside genes (72% of BRIDGES SNVs are "top 1%" for splice junctions), so by default the report ranks each scorer's |raw score| among the scored variants (`dataset`). `alphagenome` uses the Atlas quantiles instead.
+- Report (`alphagenome_modalities_report.html`, figures in `figures/`): high-impact rate per modality x region class, high-impact counts per gene x modality, the variants with the broadest effects, and per gene a multi-modality track (one row per modality, variant effects at their position, coloured by direction, above the region ticks and gene models) plus a top-variant fingerprint heatmap.
+
+Outputs: `alphagenome_modality_scores.{parquet,tsv.gz}` (one row per variant, with the VEP region and consequence), `atlas_summary.parquet`, `model_summary.parquet`, `atlas_missing.tsv`, the report. All scoring steps cache per batch.
 
 ### Sei (`sei`)
 
