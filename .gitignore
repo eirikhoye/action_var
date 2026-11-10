@@ -186,3 +186,5 @@ workflow/notebooks/*_figures/
 *.pdf
 *.csv
 *_figures/
+
+CLAUDE.md
