@@ -293,7 +293,7 @@ def run_merge(args):
     frames = [pd.read_parquet(p) for p in args.summaries]
     df = pd.concat([f for f in frames if len(f)], ignore_index=True)
     df = df.drop_duplicates('variant_id', keep='first')   # Atlas first, model for the rest
-    ann = pd.read_csv(args.annotated, dtype={'chrom': str}).drop_duplicates('Variant_ID')
+    ann = pd.read_csv(args.annotated, dtype={'chrom': str}).drop_duplicates('VariantID')
     cols = [c for c in ['VariantID', 'type', 'region', 'detail', 'Consequence', 'Protein_position',
                         'Amino_acids', 'exon_distance'] if c in ann]
     df = df.merge(ann[cols].rename(columns={'VariantID': 'variant_id'}), on='variant_id', how='left')
