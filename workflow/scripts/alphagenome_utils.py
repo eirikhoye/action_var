@@ -20,7 +20,7 @@ def load_api_key(key_file=None):
     if key_file:
         return Path(key_file).read_text().strip()
     if os.environ.get('ALPHAGENOME_API_KEY'):
-        return os.environ['APHAGENOME_API_KEY'].strip()
+        return os.environ['ALPHAGENOME_API_KEY'].strip()
     if DEFAULT_KEY_FILE.exists():
         return DEFAULT_KEY_FILE.read_text().strip()    
     sys.exit("No AlphaGenome API key: set ALPHAGENOME_API_KEY, pass --api-key-file, "

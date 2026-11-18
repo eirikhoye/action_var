@@ -188,3 +188,5 @@ workflow/notebooks/*_figures/
 *_figures/
 
 CLAUDE.md
+
+claude_reference_solutions/

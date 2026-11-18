@@ -159,7 +159,7 @@ def atlas_batch(client, batch, gene, scorers, targets, workers):
 
     def query(vs):
         return client.query_variants(vs, requested_scorers=scorers, gene_names=[gene],
-                                     progress_bar=False, max_wlrkers=workers)
+                                     progress_bar=False, max_workers=workers)
 
     try:
         results = [with_retries(lambda: query(variants), f'{gene} batch', attempts=3)]
@@ -172,7 +172,7 @@ def atlas_batch(client, batch, gene, scorers, targets, workers):
                 print(f"not in Atlas: {v} ({str(err)[:100]})", file=sys.stderr)
     per_scorer = []
     for result in results:
-        for scorer, ad in results.items():
+        for scorer, ad in result.items():
             if ad.n_obs == 0 or 'variant' not in ad.obs:
                 continue
             keys = ad.obs['variant'].astype(str).values
